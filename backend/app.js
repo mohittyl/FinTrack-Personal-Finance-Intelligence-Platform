@@ -17,7 +17,14 @@ const app = express();
 // MIDDLEWARE
 // ==========================================
 
-app.use(cors());
+app.use(cors({
+  exposedHeaders: [
+    "X-Total-Count",
+    "X-Page",
+    "X-Limit",
+    "X-Total-Pages",
+  ],
+}));
 
 app.use(express.json());
 

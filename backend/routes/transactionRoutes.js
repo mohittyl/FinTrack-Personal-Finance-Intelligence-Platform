@@ -1,286 +1,293 @@
-
 const express = require("express");
 const pool = require("../config/db");
 const authMiddleware = require("../middleware/authMiddleware");
 
 const router = express.Router();
 
-// ==========================================
-// GET /api/transactions
-// Get all transactions of logged-in user
-// ==========================================
+// Return only transactions that belong to the logged-in user.
 router.get("/", authMiddleware, async (req, res) => {
   try {
-    const userId = req.user.id;
+    const filters = getFilters(req.query, req.user.id);
+    if (filters.error) {
+      return res.status(400).json({ error: filters.error });
+    }
+
+    const page = Number(req.query.page || 1);
+    const limit = Number(req.query.limit || 10);
+
+    if (page < 1 || page % 1 !== 0 || limit < 1 || limit > 100 || limit % 1 !== 0) {
+      return res.status(400).json({ error: "Page must be positive and limit must be between 1 and 100" });
+    }
+
+    const sort = getSort(req.query);
+    if (sort.error) {
+      return res.status(400).json({ error: sort.error });
+    }
+
+    // Count matching records so the page can show total records and pages.
+    const countResult = await pool.query(
+      `SELECT COUNT(*) AS total FROM transactions WHERE ${filters.where}`,
+      filters.values
+    );
+    const total = Number(countResult.rows[0].total);
+    const offset = (page - 1) * limit;
+
+    const values = filters.values.slice();
+    values.push(limit);
+    values.push(offset);
+    const limitNumber = values.length - 1;
+    const offsetNumber = values.length;
 
     const result = await pool.query(
-      `
-      SELECT
-        id,
-        title,
-        category,
-        type,
-        amount,
-        transaction_date,
-        created_at
-      FROM transactions
-      WHERE user_id = $1
-      ORDER BY transaction_date DESC, id DESC
-      `,
-      [userId]
+      `SELECT id, title, category, type, amount, transaction_date, created_at
+       FROM transactions
+       WHERE ${filters.where}
+       ORDER BY ${sort.column} ${sort.order}, id DESC
+       LIMIT $${limitNumber} OFFSET $${offsetNumber}`,
+      values
     );
 
-    const transactions = result.rows.map((transaction) => ({
-      ...transaction,
-      amount: Number(transaction.amount),
-    }));
-
-    res.status(200).json(transactions);
+    res.set("X-Total-Count", String(total));
+    res.set("X-Page", String(page));
+    res.set("X-Limit", String(limit));
+    res.set("X-Total-Pages", String(Math.ceil(total / limit)));
+    return res.status(200).json(result.rows);
   } catch (error) {
     console.error("Get transactions error:", error);
-
-    res.status(500).json({
-      error: "Unable to fetch transactions",
-    });
+    return res.status(500).json({ error: "Unable to fetch transactions" });
   }
 });
 
-// ==========================================
-// POST /api/transactions
-// Create a new transaction
-// ==========================================
+// Get the user's categories for the category filter dropdown.
+router.get("/categories", authMiddleware, async (req, res) => {
+  try {
+    const result = await pool.query(
+      "SELECT DISTINCT category FROM transactions WHERE user_id = $1 ORDER BY category",
+      [req.user.id]
+    );
+    const categories = [];
+    for (let i = 0; i < result.rows.length; i += 1) {
+      categories.push(result.rows[i].category);
+    }
+    return res.status(200).json(categories);
+  } catch (error) {
+    console.error("Get categories error:", error);
+    return res.status(500).json({ error: "Unable to fetch categories" });
+  }
+});
+
+// Download all matching transactions as a CSV file.
+router.get("/export", authMiddleware, async (req, res) => {
+  try {
+    const filters = getFilters(req.query, req.user.id);
+    if (filters.error) {
+      return res.status(400).json({ error: filters.error });
+    }
+
+    const sort = getSort(req.query);
+    if (sort.error) {
+      return res.status(400).json({ error: sort.error });
+    }
+
+    const result = await pool.query(
+      `SELECT title, category, type, amount, transaction_date
+       FROM transactions
+       WHERE ${filters.where}
+       ORDER BY ${sort.column} ${sort.order}, id DESC`,
+      filters.values
+    );
+
+    let csv = "Title,Category,Type,Amount,Date\r\n";
+    for (let i = 0; i < result.rows.length; i += 1) {
+      const transaction = result.rows[i];
+      csv += csvCell(transaction.title) + ",";
+      csv += csvCell(transaction.category) + ",";
+      csv += csvCell(transaction.type) + ",";
+      csv += csvCell(transaction.amount) + ",";
+      csv += csvCell(String(transaction.transaction_date).slice(0, 10));
+      if (i < result.rows.length - 1) {
+        csv += "\r\n";
+      }
+    }
+
+    res.set("Content-Type", "text/csv; charset=utf-8");
+    res.set("Content-Disposition", 'attachment; filename="transactions.csv"');
+    return res.status(200).send("\uFEFF" + csv);
+  } catch (error) {
+    console.error("Export transactions error:", error);
+    return res.status(500).json({ error: "Unable to export transactions" });
+  }
+});
+
+// Add a transaction. The user ID comes from the verified JWT.
 router.post("/", authMiddleware, async (req, res) => {
   try {
-    const userId = req.user.id;
+    const body = req.body || {};
+    const title = String(body.title || "").trim();
+    const category = String(body.category || "").trim();
+    const type = body.type;
+    const amount = Number(body.amount);
+    const date = body.transaction_date;
 
-    const {
-      title,
-      category,
-      type,
-      amount,
-      transaction_date,
-    } = req.body;
-
-    if (
-      typeof title !== "string" ||
-      !title.trim() ||
-      typeof category !== "string" ||
-      !category.trim() ||
-      !["income", "expense"].includes(type) ||
-      amount === undefined ||
-      amount === null ||
-      amount === "" ||
-      !Number.isFinite(Number(amount)) ||
-      Number(amount) <= 0 ||
-      typeof transaction_date !== "string" ||
-      !/^\d{4}-\d{2}-\d{2}$/.test(transaction_date) ||
-      !isValidDate(transaction_date)
-    ) {
-      return res.status(400).json({
-        error: "Please provide valid transaction details",
-      });
+    if (!title || !category || (type !== "income" && type !== "expense")) {
+      return res.status(400).json({ error: "Enter title, category and a valid type" });
+    }
+    if (isNaN(amount) || amount <= 0) {
+      return res.status(400).json({ error: "Amount must be greater than zero" });
+    }
+    if (!isValidDate(date)) {
+      return res.status(400).json({ error: "Enter a valid transaction date" });
     }
 
     const result = await pool.query(
-      `
-      INSERT INTO transactions (
-        user_id,
-        title,
-        category,
-        type,
-        amount,
-        transaction_date
-      )
-      VALUES ($1, $2, $3, $4, $5, $6)
-      RETURNING
-        id,
-        title,
-        category,
-        type,
-        amount,
-        transaction_date,
-        created_at
-      `,
-      [
-        userId,
-        title.trim(),
-        category.trim(),
-        type,
-        Number(amount),
-        transaction_date,
-      ]
+      `INSERT INTO transactions (user_id, title, category, type, amount, transaction_date)
+       VALUES ($1, $2, $3, $4, $5, $6)
+       RETURNING id, title, category, type, amount, transaction_date, created_at`,
+      [req.user.id, title, category, type, amount, date]
     );
-
-    res.status(201).json({
-      message: "Transaction created successfully",
-      transaction: {
-        ...result.rows[0],
-        amount: Number(result.rows[0].amount),
-      },
-    });
+    return res.status(201).json({ message: "Transaction created successfully", transaction: result.rows[0] });
   } catch (error) {
     console.error("Create transaction error:", error);
-
-    res.status(500).json({
-      error: "Unable to create transaction",
-    });
+    return res.status(500).json({ error: "Unable to create transaction" });
   }
 });
 
-// ==========================================
-// PUT /api/transactions/:id
-// Update an existing transaction
-// ==========================================
+// Edit a transaction only when it belongs to the logged-in user.
 router.put("/:id", authMiddleware, async (req, res) => {
   try {
-    const userId = req.user.id;
-    const transactionId = Number(req.params.id);
+    const id = Number(req.params.id);
+    const body = req.body || {};
+    const title = String(body.title || "").trim();
+    const category = String(body.category || "").trim();
+    const type = body.type;
+    const amount = Number(body.amount);
+    const date = body.transaction_date;
 
-    const {
-      title,
-      category,
-      type,
-      amount,
-      transaction_date,
-    } = req.body;
-
-    if (
-      !Number.isInteger(transactionId) ||
-      transactionId <= 0
-    ) {
-      return res.status(400).json({
-        error: "Invalid transaction id",
-      });
+    if (id < 1 || id % 1 !== 0) {
+      return res.status(400).json({ error: "Invalid transaction id" });
     }
-
-    if (
-      typeof title !== "string" ||
-      !title.trim() ||
-      typeof category !== "string" ||
-      !category.trim() ||
-      !["income", "expense"].includes(type) ||
-      amount === undefined ||
-      amount === null ||
-      amount === "" ||
-      !Number.isFinite(Number(amount)) ||
-      Number(amount) <= 0 ||
-      typeof transaction_date !== "string" ||
-      !/^\d{4}-\d{2}-\d{2}$/.test(transaction_date) ||
-      !isValidDate(transaction_date)
-    ) {
-      return res.status(400).json({
-        error: "Please provide valid transaction details",
-      });
+    if (!title || !category || (type !== "income" && type !== "expense")) {
+      return res.status(400).json({ error: "Enter title, category and a valid type" });
+    }
+    if (isNaN(amount) || amount <= 0) {
+      return res.status(400).json({ error: "Amount must be greater than zero" });
+    }
+    if (!isValidDate(date)) {
+      return res.status(400).json({ error: "Enter a valid transaction date" });
     }
 
     const result = await pool.query(
-      `
-      UPDATE transactions
-      SET
-        title = $1,
-        category = $2,
-        type = $3,
-        amount = $4,
-        transaction_date = $5
-      WHERE id = $6
-        AND user_id = $7
-      RETURNING
-        id,
-        title,
-        category,
-        type,
-        amount,
-        transaction_date,
-        created_at
-      `,
-      [
-        title.trim(),
-        category.trim(),
-        type,
-        Number(amount),
-        transaction_date,
-        transactionId,
-        userId,
-      ]
+      `UPDATE transactions
+       SET title = $1, category = $2, type = $3, amount = $4, transaction_date = $5
+       WHERE id = $6 AND user_id = $7
+       RETURNING id, title, category, type, amount, transaction_date, created_at`,
+      [title, category, type, amount, date, id, req.user.id]
     );
-
     if (result.rows.length === 0) {
-      return res.status(404).json({
-        error: "Transaction not found",
-      });
+      return res.status(404).json({ error: "Transaction not found" });
     }
-
-    res.status(200).json({
-      message: "Transaction updated successfully",
-      transaction: {
-        ...result.rows[0],
-        amount: Number(result.rows[0].amount),
-      },
-    });
+    return res.status(200).json({ message: "Transaction updated successfully", transaction: result.rows[0] });
   } catch (error) {
     console.error("Update transaction error:", error);
-
-    res.status(500).json({
-      error: "Unable to update transaction",
-    });
+    return res.status(500).json({ error: "Unable to update transaction" });
   }
 });
 
-// ==========================================
-// DELETE /api/transactions/:id
-// Delete a transaction owned by the user
-// ==========================================
+// Delete only the logged-in user's transaction.
 router.delete("/:id", authMiddleware, async (req, res) => {
   try {
-    const userId = req.user.id;
-    const transactionId = Number(req.params.id);
-
-    if (
-      !Number.isInteger(transactionId) ||
-      transactionId <= 0
-    ) {
-      return res.status(400).json({
-        error: "Invalid transaction id",
-      });
+    const id = Number(req.params.id);
+    if (id < 1 || id % 1 !== 0) {
+      return res.status(400).json({ error: "Invalid transaction id" });
     }
 
     const result = await pool.query(
-      `
-      DELETE FROM transactions
-      WHERE id = $1 AND user_id = $2
-      RETURNING id
-      `,
-      [transactionId, userId]
+      "DELETE FROM transactions WHERE id = $1 AND user_id = $2 RETURNING id",
+      [id, req.user.id]
     );
-
     if (result.rows.length === 0) {
-      return res.status(404).json({
-        error: "Transaction not found",
-      });
+      return res.status(404).json({ error: "Transaction not found" });
     }
-
-    res.status(200).json({
-      message: "Transaction deleted successfully",
-    });
+    return res.status(200).json({ message: "Transaction deleted successfully" });
   } catch (error) {
     console.error("Delete transaction error:", error);
-
-    res.status(500).json({
-      error: "Unable to delete transaction",
-    });
+    return res.status(500).json({ error: "Unable to delete transaction" });
   }
 });
 
-// ==========================================
-// Helper: Validate YYYY-MM-DD dates
-// ==========================================
-function isValidDate(dateString) {
-  const date = new Date(`${dateString}T00:00:00.000Z`);
+// Build the WHERE part and values for search and filters.
+function getFilters(query, userId) {
+  const values = [userId];
+  let where = "user_id = $1";
 
-  return (
-    !Number.isNaN(date.getTime()) &&
-    date.toISOString().slice(0, 10) === dateString
-  );
+  if (query.search) {
+    values.push("%" + String(query.search).trim() + "%");
+    where += " AND (title ILIKE $" + values.length + " OR category ILIKE $" + values.length + ")";
+  }
+  if (query.type && query.type !== "all") {
+    if (query.type !== "income" && query.type !== "expense") {
+      return { error: "Type must be income or expense" };
+    }
+    values.push(query.type);
+    where += " AND type = $" + values.length;
+  }
+  if (query.category && query.category !== "all") {
+    values.push(query.category);
+    where += " AND category = $" + values.length;
+  }
+  if (query.dateFrom) {
+    if (!isValidDate(query.dateFrom)) {
+      return { error: "Enter a valid start date" };
+    }
+    values.push(query.dateFrom);
+    where += " AND transaction_date >= $" + values.length;
+  }
+  if (query.dateTo) {
+    if (!isValidDate(query.dateTo)) {
+      return { error: "Enter a valid end date" };
+    }
+    if (query.dateFrom && query.dateTo < query.dateFrom) {
+      return { error: "End date must be after start date" };
+    }
+    values.push(query.dateTo);
+    where += " AND transaction_date <= $" + values.length;
+  }
+  return { where: where, values: values };
+}
+
+// Sorting uses only three fixed database column names.
+function getSort(query) {
+  let column = "transaction_date";
+  if (query.sortBy === "amount") {
+    column = "amount";
+  } else if (query.sortBy === "title") {
+    column = "title";
+  } else if (query.sortBy && query.sortBy !== "date") {
+    return { error: "Sort by date, amount or title" };
+  }
+
+  let order = "DESC";
+  if (query.order === "asc") {
+    order = "ASC";
+  } else if (query.order && query.order !== "desc") {
+    return { error: "Order must be asc or desc" };
+  }
+  return { column: column, order: order };
+}
+
+// CSV cells are wrapped in quotes; inner quotes are doubled as required by CSV.
+function csvCell(value) {
+  const text = String(value || "");
+  return '"' + text.split('"').join('""') + '"';
+}
+
+// Keep date checking short and readable.
+function isValidDate(value) {
+  if (!value) {
+    return false;
+  }
+  const date = new Date(value);
+  return !isNaN(date.getTime());
 }
 
 module.exports = router;

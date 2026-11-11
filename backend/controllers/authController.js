@@ -198,7 +198,14 @@ const loginUser = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Login error:", error.message);
+    console.error("Login error:", error);
+
+    // Give a clear response when PostgreSQL is not running/reachable.
+    if (error.code === "ECONNREFUSED") {
+      return res.status(503).json({
+        error: "Database is unavailable. Start PostgreSQL and try again.",
+      });
+    }
 
     return res.status(500).json({
       error: "Internal server error",

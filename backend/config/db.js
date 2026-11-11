@@ -41,8 +41,11 @@ pool.connect()
     client.release();
   })
   .catch((error) => {
-    console.error("Database connection failed:");
-    console.error(error.message);
+    console.error(
+      "Database connection failed:",
+      error.code || error.name,
+      error.message || "No error message provided"
+    );
   });
 
 module.exports = pool;

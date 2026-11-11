@@ -1,886 +1,209 @@
-
 import { useEffect, useState } from "react";
-import {
-  Plus,
-  Trash2,
-  X,
-  Pencil,
-  ArrowDownLeft,
-  ArrowUpRight,
-  Receipt,
-} from "lucide-react";
-
+import { Download, Pencil, Plus, Trash2, X } from "lucide-react";
 import Sidebar from "../components/Sidebar";
 import Navbar from "../components/Navbar";
 import api from "../services/api";
 
-const initialFormData = () => ({
-  title: "",
-  category: "",
-  type: "expense",
-  amount: "",
-  transaction_date: new Date().toLocaleDateString("en-CA"),
-});
+const pageSize = 10;
+
+function emptyForm() {
+  return { title: "", category: "", type: "expense", amount: "", transaction_date: new Date().toLocaleDateString("en-CA") };
+}
 
 function Transactions() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [transactions, setTransactions] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [search, setSearch] = useState("");
+  const [type, setType] = useState("all");
+  const [category, setCategory] = useState("all");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+  const [sortBy, setSortBy] = useState("date-desc");
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
-  const [filter, setFilter] = useState("all");
-  const [search, setSearch] = useState("");
+  const [formData, setFormData] = useState(emptyForm);
 
-  const [formData, setFormData] = useState(initialFormData);
+  function queryParams() {
+    let sortColumn = "date";
+    let order = "desc";
+    if (sortBy === "date-asc") order = "asc";
+    else if (sortBy === "amount-high") sortColumn = "amount";
+    else if (sortBy === "amount-low") { sortColumn = "amount"; order = "asc"; }
+    else if (sortBy === "title-az") { sortColumn = "title"; order = "asc"; }
+    else if (sortBy === "title-za") sortColumn = "title";
+    return { search, type, category, dateFrom, dateTo, sortBy: sortColumn, order };
+  }
 
-  const incomeCategories = ["Salary", "Freelance", "Other"];
-
-  const expenseCategories = [
-    "Food",
-    "Shopping",
-    "Transport",
-    "Education",
-    "Entertainment",
-    "Bills",
-    "Healthcare",
-    "Other",
-  ];
-
-  const categories =
-    formData.type === "income"
-      ? incomeCategories
-      : expenseCategories;
-
-  useEffect(() => {
-    fetchTransactions();
-  }, []);
-
-  const fetchTransactions = async () => {
+  async function loadTransactions() {
     try {
       setLoading(true);
       setError("");
-
-      const response = await api.get("/transactions");
-
-      setTransactions(
-        Array.isArray(response.data) ? response.data : []
-      );
+      const params = queryParams();
+      params.page = page;
+      params.limit = pageSize;
+      const response = await api.get("/transactions", { params });
+      setTransactions(response.data);
+      setTotal(Number(response.headers["x-total-count"] || 0));
     } catch (err) {
-      console.error("Transactions error:", err);
-      setError(
-        err.response?.data?.error ||
-          "Unable to load transactions"
-      );
+      setError(err.response?.data?.error || "Unable to load transactions");
     } finally {
       setLoading(false);
     }
-  };
+  }
 
-  const formatCurrency = (amount) =>
-    new Intl.NumberFormat("en-IN", {
-      style: "currency",
-      currency: "INR",
-      maximumFractionDigits: 2,
-    }).format(Number(amount || 0));
+  async function loadCategories() {
+    try {
+      const response = await api.get("/transactions/categories");
+      setCategories(response.data);
+    } catch (err) {
+      setError(err.response?.data?.error || "Unable to load categories");
+    }
+  }
 
-  const formatDate = (date) => {
-    if (!date) return "-";
+  useEffect(() => { loadTransactions(); }, [search, type, category, dateFrom, dateTo, sortBy, page]);
+  useEffect(() => { loadCategories(); }, []);
 
-    const dateString = String(date).slice(0, 10);
-    const parts = dateString.split("-");
+  function changeFilter(setter, value) {
+    setter(value);
+    setPage(1);
+  }
 
-    if (parts.length !== 3) return dateString;
+  function money(value) {
+    return new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 2 }).format(Number(value || 0));
+  }
 
-    return new Date(
-      Date.UTC(
-        Number(parts[0]),
-        Number(parts[1]) - 1,
-        Number(parts[2])
-      )
-    ).toLocaleDateString("en-IN", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-      timeZone: "UTC",
-    });
-  };
+  function dateText(value) {
+    const parts = String(value).slice(0, 10).split("-");
+    if (parts.length !== 3) return value || "-";
+    return parts[2] + "/" + parts[1] + "/" + parts[0];
+  }
 
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-
-    setFormData((previous) => ({
-      ...previous,
-      [name]: value,
-    }));
-  };
-
-  const handleTypeChange = (type) => {
-    setFormData((previous) => ({
-      ...previous,
-      type,
-      category: "",
-    }));
-  };
-
-  const openForm = () => {
+  function addForm() {
     setEditingId(null);
-    setFormData(initialFormData());
+    setFormData(emptyForm());
     setError("");
     setShowForm(true);
-  };
+  }
 
-  const openEditForm = (transaction) => {
-    setEditingId(transaction.id);
-
-    setFormData({
-      title: transaction.title || "",
-      category: transaction.category || "",
-      type: transaction.type,
-      amount: String(transaction.amount ?? ""),
-      transaction_date: String(
-        transaction.transaction_date
-      ).slice(0, 10),
-    });
-
+  function editForm(item) {
+    setEditingId(item.id);
+    setFormData({ title: item.title, category: item.category, type: item.type, amount: String(item.amount), transaction_date: String(item.transaction_date).slice(0, 10) });
     setError("");
     setShowForm(true);
-  };
+  }
 
-  const closeForm = () => {
+  function closeForm() {
     if (saving) return;
-
     setShowForm(false);
     setEditingId(null);
-    setFormData(initialFormData());
+    setFormData(emptyForm());
     setError("");
-  };
+  }
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError("");
-
+  async function saveTransaction(event) {
+    event.preventDefault();
     const amount = Number(formData.amount);
-
-    if (!formData.title.trim()) {
-      setError("Please enter a transaction title.");
+    if (!formData.title.trim() || !formData.category.trim() || amount <= 0 || !formData.transaction_date) {
+      setError("Enter a title, category, positive amount and date.");
       return;
     }
-
-    if (!formData.category) {
-      setError("Please select a category.");
-      return;
-    }
-
-    if (
-      !Number.isFinite(amount) ||
-      amount <= 0
-    ) {
-      setError("Please enter a valid amount greater than zero.");
-      return;
-    }
-
-    if (!formData.transaction_date) {
-      setError("Please select a transaction date.");
-      return;
-    }
-
-    const payload = {
-      title: formData.title.trim(),
-      category: formData.category,
-      type: formData.type,
-      amount,
-      transaction_date: formData.transaction_date,
-    };
-
+    const item = { title: formData.title.trim(), category: formData.category.trim(), type: formData.type, amount, transaction_date: formData.transaction_date };
     try {
       setSaving(true);
-
-      if (editingId !== null) {
-        await api.put(
-          `/transactions/${editingId}`,
-          payload
-        );
-      } else {
-        await api.post("/transactions", payload);
-      }
-
+      setError("");
+      if (editingId) await api.put("/transactions/" + editingId, item);
+      else await api.post("/transactions", item);
       setShowForm(false);
       setEditingId(null);
-      setFormData(initialFormData());
-
-      await fetchTransactions();
+      await loadCategories();
+      await loadTransactions();
     } catch (err) {
-      console.error("Save transaction error:", err);
-
-      setError(
-        err.response?.data?.error ||
-          (editingId !== null
-            ? "Unable to update transaction"
-            : "Unable to create transaction")
-      );
+      setError(err.response?.data?.error || "Unable to save transaction");
     } finally {
       setSaving(false);
     }
-  };
+  }
 
-  const handleDelete = async (id) => {
-    const confirmed = window.confirm(
-      "Are you sure you want to delete this transaction?"
-    );
-
-    if (!confirmed) return;
-
+  async function deleteTransaction(id) {
+    if (!window.confirm("Delete this transaction?")) return;
     try {
-      setError("");
-
-      await api.delete(`/transactions/${id}`);
-
-      setTransactions((previous) =>
-        previous.filter(
-          (transaction) => transaction.id !== id
-        )
-      );
+      await api.delete("/transactions/" + id);
+      if (transactions.length === 1 && page > 1) setPage(page - 1);
+      else await loadTransactions();
+      await loadCategories();
     } catch (err) {
-      console.error("Delete transaction error:", err);
-
-      setError(
-        err.response?.data?.error ||
-          "Unable to delete transaction"
-      );
+      setError(err.response?.data?.error || "Unable to delete transaction");
     }
-  };
+  }
 
-  const filteredTransactions = transactions.filter(
-    (transaction) => {
-      const matchesType =
-        filter === "all" || transaction.type === filter;
-
-      const searchText = search.trim().toLowerCase();
-
-      const matchesSearch =
-        !searchText ||
-        [
-          transaction.title,
-          transaction.category,
-          transaction.type,
-        ].some((value) =>
-          String(value || "")
-            .toLowerCase()
-            .includes(searchText)
-        );
-
-      return matchesType && matchesSearch;
+  async function exportCSV() {
+    try {
+      const response = await api.get("/transactions/export", { params: queryParams(), responseType: "blob" });
+      const fileUrl = URL.createObjectURL(new Blob([response.data], { type: "text/csv;charset=utf-8" }));
+      const link = document.createElement("a");
+      link.href = fileUrl;
+      link.download = "transactions.csv";
+      link.click();
+      URL.revokeObjectURL(fileUrl);
+    } catch (err) {
+      setError(err.response?.data?.error || "Unable to export transactions");
     }
-  );
+  }
 
-  const totalIncome = transactions
-    .filter((transaction) => transaction.type === "income")
-    .reduce(
-      (sum, transaction) =>
-        sum + Number(transaction.amount || 0),
-      0
-    );
-
-  const totalExpenses = transactions
-    .filter((transaction) => transaction.type === "expense")
-    .reduce(
-      (sum, transaction) =>
-        sum + Number(transaction.amount || 0),
-      0
-    );
-
-  const balance = totalIncome - totalExpenses;
-
-  const inputClass =
-    "w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm text-gray-900 outline-none focus:border-green-500 focus:ring-2 focus:ring-green-100";
-
-  const actionButtonClass =
-    "rounded-lg p-2 transition hover:bg-gray-100";
+  let income = 0;
+  let expenses = 0;
+  for (let i = 0; i < transactions.length; i += 1) {
+    if (transactions[i].type === "income") income += Number(transactions[i].amount);
+    else expenses += Number(transactions[i].amount);
+  }
+  let totalPages = Math.ceil(total / pageSize);
+  if (totalPages < 1) totalPages = 1;
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Sidebar
-        isOpen={sidebarOpen}
-        onClose={() => setSidebarOpen(false)}
-      />
-
-      <Navbar
-        onMenuClick={() => setSidebarOpen(true)}
-      />
-
-      <main className="p-4 pt-20 sm:p-6 sm:pt-20 lg:ml-64 lg:p-8 lg:pt-24">
-        {/* Header */}
-        <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <p className="mb-1 text-sm font-medium text-green-600">
-              Money activity
-            </p>
-
-            <h1 className="text-2xl font-bold tracking-tight text-gray-900 sm:text-3xl">
-              Transactions
-            </h1>
-
-            <p className="mt-1.5 text-sm text-gray-500">
-              Keep track of your income and expenses.
-            </p>
+    <div className="transactions-page">
+      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      <Navbar onMenuClick={() => setSidebarOpen(true)} />
+      <main className="transactions-content">
+        <header className="transactions-heading"><div><p className="transactions-eyebrow">Money activity</p><h1>Transactions</h1><p className="transactions-subtitle">Keep track of your income and expenses.</p></div><button className="button button-primary" onClick={addForm}><Plus size={18} /> Add Transaction</button></header>
+        {error && !showForm && <div className="transactions-error">{error}</div>}
+        <section className="summary-grid">
+          <SummaryCard label="Income on this page" value={money(income)} color="green" />
+          <SummaryCard label="Expenses on this page" value={money(expenses)} color="red" />
+          <SummaryCard label="Page balance" value={money(income - expenses)} color="blue" />
+        </section>
+        <section className="history-section">
+          <div className="history-heading"><div><h2>Transaction history</h2><p>{total} transaction(s)</p></div><button className="button button-secondary" onClick={exportCSV} disabled={!total}><Download size={16} /> Export CSV</button></div>
+          <div className="transaction-controls">
+            <input type="search" placeholder="Search title or category" value={search} onChange={(e) => changeFilter(setSearch, e.target.value)} />
+            <select value={type} onChange={(e) => changeFilter(setType, e.target.value)}><option value="all">All types</option><option value="income">Income</option><option value="expense">Expense</option></select>
+            <select value={category} onChange={(e) => changeFilter(setCategory, e.target.value)}><option value="all">All categories</option>{categories.map((name) => <option key={name} value={name}>{name}</option>)}</select>
+            <label>From <input type="date" value={dateFrom} onChange={(e) => changeFilter(setDateFrom, e.target.value)} /></label>
+            <label>To <input type="date" value={dateTo} onChange={(e) => changeFilter(setDateTo, e.target.value)} /></label>
+            <select value={sortBy} onChange={(e) => changeFilter(setSortBy, e.target.value)}><option value="date-desc">Newest first</option><option value="date-asc">Oldest first</option><option value="amount-high">Amount: high to low</option><option value="amount-low">Amount: low to high</option><option value="title-az">Title: A to Z</option><option value="title-za">Title: Z to A</option></select>
           </div>
-
-          <button
-            onClick={openForm}
-            className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-green-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-green-700 sm:w-auto"
-          >
-            <Plus size={18} />
-            Add Transaction
-          </button>
-        </div>
-
-        {/* Error message */}
-        {error && !showForm && (
-          <div className="mb-5 flex items-center justify-between gap-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-            <span>{error}</span>
-
-            <button
-              onClick={fetchTransactions}
-              className="shrink-0 font-semibold underline"
-            >
-              Retry
-            </button>
+          <div className="transaction-table-wrap">
+            {loading ? <p className="transactions-message">Loading transactions...</p> : transactions.length === 0 ? <p className="transactions-message">No transactions found.</p> : (
+              <table className="transaction-table"><thead><tr><th>Title</th><th>Category</th><th>Type</th><th>Date</th><th>Amount</th><th>Actions</th></tr></thead><tbody>
+                {transactions.map((item) => <tr key={item.id}><td>{item.title}</td><td>{item.category}</td><td><span className={`type-label ${item.type}`}>{item.type}</span></td><td>{dateText(item.transaction_date)}</td><td className={`amount ${item.type}`}>{money(item.amount)}</td><td className="row-actions"><button title="Edit" onClick={() => editForm(item)}><Pencil size={16} /></button><button title="Delete" onClick={() => deleteTransaction(item.id)}><Trash2 size={16} /></button></td></tr>)}
+              </tbody></table>
+            )}
           </div>
-        )}
-
-        {/* Summary cards */}
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-          <SummaryCard
-            title="Total Income"
-            amount={formatCurrency(totalIncome)}
-            icon={<ArrowDownLeft size={20} />}
-            iconClass="bg-green-50 text-green-600"
-          />
-
-          <SummaryCard
-            title="Total Expenses"
-            amount={formatCurrency(totalExpenses)}
-            icon={<ArrowUpRight size={20} />}
-            iconClass="bg-red-50 text-red-600"
-          />
-
-          <SummaryCard
-            title="Balance"
-            amount={formatCurrency(balance)}
-            icon={<Receipt size={20} />}
-            iconClass="bg-gray-100 text-gray-700"
-            amountClass={
-              balance < 0 ? "text-red-600" : "text-gray-900"
-            }
-          />
-        </div>
-
-        {/* Filters and search */}
-        <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h2 className="text-lg font-semibold text-gray-900">
-              Transaction history
-            </h2>
-
-            <p className="mt-0.5 text-sm text-gray-500">
-              {filteredTransactions.length}{" "}
-              {filteredTransactions.length === 1
-                ? "transaction"
-                : "transactions"}
-            </p>
-          </div>
-
-          <div className="flex flex-col gap-3 sm:flex-row">
-            <input
-              type="search"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search transactions..."
-              aria-label="Search transactions"
-              className={inputClass}
-            />
-
-            <div className="flex gap-2">
-              {[
-                { value: "all", label: "All" },
-                { value: "income", label: "Income" },
-                { value: "expense", label: "Expenses" },
-              ].map((option) => (
-                <button
-                  key={option.value}
-                  onClick={() => setFilter(option.value)}
-                  className={`rounded-lg px-3 py-2 text-sm font-medium transition ${
-                    filter === option.value
-                      ? option.value === "income"
-                        ? "bg-green-600 text-white"
-                        : option.value === "expense"
-                          ? "bg-red-600 text-white"
-                          : "bg-gray-900 text-white"
-                      : "border border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
-                  }`}
-                >
-                  {option.label}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Transaction list */}
-        <section className="mt-4 overflow-hidden rounded-xl border border-gray-200 bg-white">
-          {loading ? (
-            <div className="flex min-h-[260px] items-center justify-center">
-              <p className="text-sm text-gray-500">
-                Loading transactions...
-              </p>
-            </div>
-          ) : filteredTransactions.length === 0 ? (
-            <div className="flex min-h-[260px] flex-col items-center justify-center px-5 py-10 text-center">
-              <Receipt size={28} className="text-gray-400" />
-
-              <h3 className="mt-4 font-semibold text-gray-900">
-                No transactions found
-              </h3>
-
-              <p className="mt-1 text-sm text-gray-500">
-                {search || filter !== "all"
-                  ? "Try changing your search or filter."
-                  : "Add your first transaction to start tracking your finances."}
-              </p>
-
-              {!search && filter === "all" && (
-                <button
-                  onClick={openForm}
-                  className="mt-4 inline-flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-green-700"
-                >
-                  <Plus size={18} />
-                  Add Transaction
-                </button>
-              )}
-            </div>
-          ) : (
-            <>
-              {/* Desktop table */}
-              <div className="hidden overflow-x-auto md:block">
-                <table className="w-full">
-                  <thead className="border-b border-gray-200 bg-gray-50">
-                    <tr>
-                      {[
-                        "Transaction",
-                        "Category",
-                        "Type",
-                        "Date",
-                        "Amount",
-                        "Actions",
-                      ].map((heading) => (
-                        <th
-                          key={heading}
-                          className={`px-5 py-3 text-xs font-semibold uppercase tracking-wide text-gray-500 ${
-                            heading === "Amount" ||
-                            heading === "Actions"
-                              ? "text-right"
-                              : "text-left"
-                          }`}
-                        >
-                          {heading}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-
-                  <tbody>
-                    {filteredTransactions.map((transaction) => {
-                      const isIncome =
-                        transaction.type === "income";
-
-                      return (
-                        <tr
-                          key={transaction.id}
-                          className="border-b border-gray-100 last:border-0 hover:bg-gray-50"
-                        >
-                          <td className="px-5 py-4 font-medium text-gray-900">
-                            {transaction.title}
-                          </td>
-
-                          <td className="px-5 py-4 text-sm text-gray-600">
-                            {transaction.category}
-                          </td>
-
-                          <td className="px-5 py-4">
-                            <span
-                              className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium ${
-                                isIncome
-                                  ? "bg-green-50 text-green-700"
-                                  : "bg-red-50 text-red-700"
-                              }`}
-                            >
-                              {isIncome ? "Income" : "Expense"}
-                            </span>
-                          </td>
-
-                          <td className="px-5 py-4 text-sm text-gray-500">
-                            {formatDate(
-                              transaction.transaction_date
-                            )}
-                          </td>
-
-                          <td
-                            className={`px-5 py-4 text-right font-semibold ${
-                              isIncome
-                                ? "text-green-600"
-                                : "text-red-600"
-                            }`}
-                          >
-                            {isIncome ? "+" : "-"}
-                            {formatCurrency(transaction.amount)}
-                          </td>
-
-                          <td className="px-5 py-4">
-                            <div className="flex justify-end gap-1">
-                              <button
-                                onClick={() =>
-                                  openEditForm(transaction)
-                                }
-                                className={`${actionButtonClass} text-gray-500 hover:text-green-700`}
-                                title="Edit transaction"
-                                aria-label={`Edit ${transaction.title}`}
-                              >
-                                <Pencil size={17} />
-                              </button>
-
-                              <button
-                                onClick={() =>
-                                  handleDelete(transaction.id)
-                                }
-                                className={`${actionButtonClass} text-gray-400 hover:bg-red-50 hover:text-red-600`}
-                                title="Delete transaction"
-                                aria-label={`Delete ${transaction.title}`}
-                              >
-                                <Trash2 size={17} />
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-
-              {/* Mobile list */}
-              <div className="divide-y divide-gray-100 md:hidden">
-                {filteredTransactions.map((transaction) => {
-                  const isIncome =
-                    transaction.type === "income";
-
-                  return (
-                    <div
-                      key={transaction.id}
-                      className="p-4 hover:bg-gray-50"
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex min-w-0 items-start gap-3">
-                          <div
-                            className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${
-                              isIncome ? "bg-green-50" : "bg-red-50"
-                            }`}
-                          >
-                            {isIncome ? (
-                              <ArrowDownLeft
-                                size={18}
-                                className="text-green-600"
-                              />
-                            ) : (
-                              <ArrowUpRight
-                                size={18}
-                                className="text-red-600"
-                              />
-                            )}
-                          </div>
-
-                          <div className="min-w-0">
-                            <p className="truncate font-medium text-gray-900">
-                              {transaction.title}
-                            </p>
-
-                            <p className="mt-1 text-xs text-gray-500">
-                              {transaction.category} ·{" "}
-                              {formatDate(
-                                transaction.transaction_date
-                              )}
-                            </p>
-
-                            <div className="mt-2 flex gap-2">
-                              <button
-                                onClick={() =>
-                                  openEditForm(transaction)
-                                }
-                                className="inline-flex items-center gap-1 rounded-md border border-gray-200 px-2 py-1 text-xs text-gray-700 hover:bg-gray-100"
-                              >
-                                <Pencil size={13} />
-                                Edit
-                              </button>
-
-                              <button
-                                onClick={() =>
-                                  handleDelete(transaction.id)
-                                }
-                                className="inline-flex items-center gap-1 rounded-md border border-red-100 px-2 py-1 text-xs text-red-600 hover:bg-red-50"
-                              >
-                                <Trash2 size={13} />
-                                Delete
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-
-                        <p
-                          className={`shrink-0 text-sm font-semibold ${
-                            isIncome
-                              ? "text-green-600"
-                              : "text-red-600"
-                          }`}
-                        >
-                          {isIncome ? "+" : "-"}
-                          {formatCurrency(transaction.amount)}
-                        </p>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </>
-          )}
+          {!loading && total > 0 && <div className="pagination"><span>Showing {(page - 1) * pageSize + 1}–{Math.min(page * pageSize, total)} of {total}</span><div><button disabled={page === 1} onClick={() => setPage(page - 1)}>Previous</button><span>Page {page} of {totalPages}</span><button disabled={page >= totalPages} onClick={() => setPage(page + 1)}>Next</button></div></div>}
         </section>
       </main>
-
-      {/* Add/Edit modal */}
-      {showForm && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
-          onMouseDown={(e) => {
-            if (e.target === e.currentTarget) closeForm();
-          }}
-        >
-          <div className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-xl bg-white shadow-xl">
-            <div className="flex items-start justify-between border-b border-gray-200 p-5">
-              <div>
-                <h2 className="text-lg font-semibold text-gray-900">
-                  {editingId !== null
-                    ? "Edit Transaction"
-                    : "Add Transaction"}
-                </h2>
-
-                <p className="mt-1 text-sm text-gray-500">
-                  {editingId !== null
-                    ? "Update your transaction details."
-                    : "Add your income or expense."}
-                </p>
-              </div>
-
-              <button
-                type="button"
-                onClick={closeForm}
-                disabled={saving}
-                className="rounded-lg p-2 text-gray-500 hover:bg-gray-100 disabled:opacity-50"
-                aria-label="Close form"
-              >
-                <X size={20} />
-              </button>
-            </div>
-
-            <form onSubmit={handleSubmit} className="p-5">
-              {error && (
-                <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2.5 text-sm text-red-700">
-                  {error}
-                </div>
-              )}
-
-              {/* Type */}
-              <label className="mb-1.5 block text-sm font-medium text-gray-700">
-                Transaction Type
-              </label>
-
-              <div className="grid grid-cols-2 gap-3">
-                {["expense", "income"].map((type) => (
-                  <button
-                    key={type}
-                    type="button"
-                    onClick={() => handleTypeChange(type)}
-                    className={`rounded-lg border px-4 py-2.5 text-sm font-medium transition ${
-                      formData.type === type
-                        ? type === "income"
-                          ? "border-green-500 bg-green-50 text-green-700"
-                          : "border-red-500 bg-red-50 text-red-700"
-                        : "border-gray-300 text-gray-700 hover:bg-gray-50"
-                    }`}
-                  >
-                    {type === "income" ? "Income" : "Expense"}
-                  </button>
-                ))}
-              </div>
-
-              {/* Title */}
-              <div className="mt-4">
-                <label
-                  htmlFor="transaction-title"
-                  className="mb-1.5 block text-sm font-medium text-gray-700"
-                >
-                  Title
-                </label>
-
-                <input
-                  id="transaction-title"
-                  type="text"
-                  name="title"
-                  value={formData.title}
-                  onChange={handleInputChange}
-                  maxLength={150}
-                  required
-                  placeholder={
-                    formData.type === "income"
-                      ? "e.g. Monthly salary"
-                      : "e.g. Grocery shopping"
-                  }
-                  className={inputClass}
-                />
-              </div>
-
-              {/* Category */}
-              <div className="mt-4">
-                <label
-                  htmlFor="transaction-category"
-                  className="mb-1.5 block text-sm font-medium text-gray-700"
-                >
-                  Category
-                </label>
-
-                <select
-                  id="transaction-category"
-                  name="category"
-                  value={formData.category}
-                  onChange={handleInputChange}
-                  required
-                  className={inputClass}
-                >
-                  <option value="">Select category</option>
-
-                  {categories.map((category) => (
-                    <option key={category} value={category}>
-                      {category}
-                    </option>
-                  ))}
-
-                  {/* Preserve existing categories while editing */}
-                  {formData.category &&
-                    !categories.includes(formData.category) && (
-                      <option value={formData.category}>
-                        {formData.category}
-                      </option>
-                    )}
-                </select>
-              </div>
-
-              {/* Amount */}
-              <div className="mt-4">
-                <label
-                  htmlFor="transaction-amount"
-                  className="mb-1.5 block text-sm font-medium text-gray-700"
-                >
-                  Amount (₹)
-                </label>
-
-                <input
-                  id="transaction-amount"
-                  type="number"
-                  name="amount"
-                  value={formData.amount}
-                  onChange={handleInputChange}
-                  min="0.01"
-                  step="0.01"
-                  max="9999999999.99"
-                  required
-                  placeholder="1000"
-                  className={inputClass}
-                />
-              </div>
-
-              {/* Date */}
-              <div className="mt-4">
-                <label
-                  htmlFor="transaction-date"
-                  className="mb-1.5 block text-sm font-medium text-gray-700"
-                >
-                  Date
-                </label>
-
-                <input
-                  id="transaction-date"
-                  type="date"
-                  name="transaction_date"
-                  value={formData.transaction_date}
-                  onChange={handleInputChange}
-                  required
-                  className={inputClass}
-                />
-              </div>
-
-              {/* Actions */}
-              <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-                <button
-                  type="button"
-                  onClick={closeForm}
-                  disabled={saving}
-                  className="rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
-                >
-                  Cancel
-                </button>
-
-                <button
-                  type="submit"
-                  disabled={saving}
-                  className="inline-flex items-center justify-center gap-2 rounded-lg bg-green-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  {saving
-                    ? "Saving..."
-                    : editingId !== null
-                      ? "Save Changes"
-                      : "Add Transaction"}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      {showForm && <div className="modal-backdrop" onMouseDown={(e) => { if (e.target === e.currentTarget) closeForm(); }}><section className="transaction-modal"><div className="modal-heading"><div><h2>{editingId ? "Edit Transaction" : "Add Transaction"}</h2><p>Enter the transaction details.</p></div><button className="icon-button" onClick={closeForm} disabled={saving}><X size={20} /></button></div><form onSubmit={saveTransaction}>{error && <p className="form-error">{error}</p>}<label>Type<select value={formData.type} onChange={(e) => setFormData({ ...formData, type: e.target.value })}><option value="expense">Expense</option><option value="income">Income</option></select></label><label>Title<input maxLength={150} required value={formData.title} onChange={(e) => setFormData({ ...formData, title: e.target.value })} /></label><label>Category<input maxLength={100} required value={formData.category} onChange={(e) => setFormData({ ...formData, category: e.target.value })} /></label><label>Amount<input type="number" min="0.01" step="0.01" required value={formData.amount} onChange={(e) => setFormData({ ...formData, amount: e.target.value })} /></label><label>Date<input type="date" required value={formData.transaction_date} onChange={(e) => setFormData({ ...formData, transaction_date: e.target.value })} /></label><div className="modal-actions"><button type="button" className="button button-secondary" onClick={closeForm} disabled={saving}>Cancel</button><button type="submit" className="button button-primary" disabled={saving}>{saving ? "Saving..." : editingId ? "Save Changes" : "Add Transaction"}</button></div></form></section></div>}
     </div>
   );
 }
 
-function SummaryCard({
-  title,
-  amount,
-  icon,
-  iconClass,
-  amountClass = "text-gray-900",
-}) {
-  return (
-    <div className="rounded-xl border border-gray-200 bg-white p-5">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className="text-sm text-gray-500">{title}</p>
-          <p className={`mt-2 text-2xl font-bold ${amountClass}`}>
-            {amount}
-          </p>
-        </div>
-
-        <div className={`rounded-lg p-2 ${iconClass}`}>
-          {icon}
-        </div>
-      </div>
-    </div>
-  );
+function SummaryCard({ label, value, color }) {
+  return <article className={`summary-card ${color}`}><p>{label}</p><strong>{value}</strong></article>;
 }
 
 export default Transactions;
