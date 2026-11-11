@@ -1,6 +1,34 @@
 # FinTrack
 
-FinTrack is a personal finance app for tracking income, expenses, budgets, savings goals, and recurring payments.
+FinTrack is a full-stack personal finance project. A user can record income and expenses, set budgets and savings goals, and review their activity.
+
+## How the project works
+
+1. The user opens the React frontend and signs in.
+2. The frontend sends requests to the Express API.
+3. The API checks the user's JWT and reads or saves data in PostgreSQL.
+4. The API returns data as JSON. The frontend displays it in the app.
+
+The backend uses Express routes to handle API requests. PostgreSQL queries use the `pg` package. Passwords are hashed with `bcryptjs`, and JWTs are used to identify the logged-in user.
+
+## Project modules
+
+- **Transactions:** create, edit, delete, search, filter, sort, paginate, and export transactions as CSV.
+- **Budgets:** set spending limits by category and month.
+- **Goals:** track savings targets.
+- **Recurring payments:** record repeating payments.
+- **Dashboard and analytics:** review totals and income/expense activity.
+- **Settings:** update account details.
+
+## Main folders
+
+- `backend/routes/` contains Express API routes.
+- `backend/controllers/` contains request handling code such as login and registration.
+- `backend/middleware/` contains JWT authentication checks.
+- `backend/config/` contains the PostgreSQL connection.
+- `backend/schema.sql` contains the database tables.
+- `frontend/src/pages/` contains the React pages.
+- `frontend/src/services/api.js` contains the frontend API connection and JWT header setup.
 
 ## Tech used
 
