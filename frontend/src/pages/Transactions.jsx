@@ -123,16 +123,24 @@ function Transactions() {
       setError("Enter a title, category, positive amount and date.");
       return;
     }
+
+    const isEditing = editingId !== null;
     const item = { title: formData.title.trim(), category: formData.category.trim(), type: formData.type, amount, transaction_date: formData.transaction_date };
     try {
       setSaving(true);
       setError("");
-      if (editingId) await api.put("/transactions/" + editingId, item);
+      if (isEditing) await api.put("/transactions/" + editingId, item);
       else await api.post("/transactions", item);
       setShowForm(false);
       setEditingId(null);
       await loadCategories();
-      await loadTransactions();
+
+      // New transactions are sorted newest first, so show page one after adding.
+      if (!isEditing && page > 1) {
+        setPage(1);
+      } else {
+        await loadTransactions();
+      }
     } catch (err) {
       setError(err.response?.data?.error || "Unable to save transaction");
     } finally {
