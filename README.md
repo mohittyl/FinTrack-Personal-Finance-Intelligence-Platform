@@ -45,11 +45,23 @@ Open the Vite URL shown in the terminal. Register a user, then log in. The datab
 
 After logging in, send the returned JWT as `Authorization: Bearer <token>`.
 
-- `GET /api/transactions` — list transactions; supports `search`, `type`, `category`, `dateFrom`, `dateTo`, `sortBy`, and `order` query parameters.
-- Add `page` and `limit` to paginate, for example: `/api/transactions?type=expense&sortBy=amount&order=desc&page=1&limit=10`. The response is still a JSON array. Pagination details are returned in the `X-Total-Count`, `X-Page`, `X-Limit`, and `X-Total-Pages` headers. The maximum page size is 100.
+- `GET /api/transactions` — list the logged-in user's transactions. It supports `search`, `type`, `category`, `dateFrom`, `dateTo`, `sortBy`, `order`, `page`, and `limit` query parameters.
+- Page number defaults to `1` and page size defaults to `10`. Example: `/api/transactions?search=food&type=expense&category=Food&dateFrom=2026-01-01&dateTo=2026-01-31&sortBy=amount&order=desc&page=1&limit=10`.
+- The response is a JSON array. Pagination information is returned in the `X-Total-Count`, `X-Page`, `X-Limit`, and `X-Total-Pages` headers. The maximum page size is 100.
+- `GET /api/transactions/categories` — list the logged-in user's categories for the category dropdown.
 - `POST /api/transactions` — add a transaction.
 - `PUT /api/transactions/:id` — edit a transaction.
 - `DELETE /api/transactions/:id` — delete a transaction.
-- `GET /api/transactions/export?type=expense` — download all matching transactions as a CSV file. It supports the same search, filter, and sorting parameters.
+- `GET /api/transactions/export?type=expense` — download all matching transactions as a CSV file. It supports the same search, filter, and sorting parameters and exports all matches, not only the current page.
 
 The route uses parameterized SQL for filters and only allows known sort columns, so query values cannot be used to inject SQL.
+
+### Quick API check
+
+1. Log in and copy the returned token.
+2. In Postman, set the request header to `Authorization: Bearer <token>`.
+3. Send a `POST /api/transactions` request with JSON fields `title`, `category`, `type`, `amount`, and `transaction_date`.
+4. Try the example `GET` request above, then use the `PUT` and `DELETE` routes with the created transaction ID.
+5. Open the export route in Postman to check the CSV response.
+
+For a viva explanation: `req.query` contains search/filter/page options, `$1` placeholders safely pass values to PostgreSQL, and `LIMIT`/`OFFSET` select one page of records.
