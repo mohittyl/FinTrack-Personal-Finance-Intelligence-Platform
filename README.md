@@ -57,9 +57,11 @@ Keep `backend/.env` private and do not upload real passwords or JWT secrets to G
 
 ## Run the project
 
-1. Start PostgreSQL.
-2. Set the PostgreSQL password and JWT secret in `backend/.env`. Keep this file private.
-3. Install backend dependencies and create the app database and tables:
+Use two terminals: one for the backend and one for the frontend.
+
+### 1. Prepare the database
+
+Start PostgreSQL, then make sure `backend/.env` has the correct database settings. In the first terminal, run:
 
    ```sh
    cd backend
@@ -68,7 +70,11 @@ Keep `backend/.env` private and do not upload real passwords or JWT secrets to G
    npm run dev
    ```
 
-4. In another terminal, start the frontend:
+Run `npm run db:setup` the first time, or when you need to create the project tables. It creates the `fintrack` database if it does not exist, then creates the app tables. It does not delete or modify other databases. Keep `npm run dev` running while using the app.
+
+### 2. Start the frontend
+
+In a second terminal, run:
 
    ```sh
    cd frontend
@@ -76,7 +82,13 @@ Keep `backend/.env` private and do not upload real passwords or JWT secrets to G
    npm run dev
    ```
 
-Open the Vite URL shown in the terminal. Register a user, then log in. The database setup creates the `fintrack` database and the tables used by the API. It does not delete or modify other databases.
+Open the local URL printed by Vite, usually `http://localhost:5173`. Register a user and log in.
+
+### Other useful commands
+
+- Run the backend without automatic restart: `cd backend && npm start`.
+- Build the frontend: `cd frontend && npm run build`.
+- Stop either running server with `Ctrl+C` in its terminal.
 
 ## Main pages
 
