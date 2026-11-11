@@ -37,6 +37,24 @@ The backend uses Express routes to handle API requests. PostgreSQL queries use t
 - PostgreSQL with the `pg` database driver
 - JWT for login sessions and `bcryptjs` for password hashing
 
+## Requirements and environment
+
+Install Node.js with npm and PostgreSQL before running the app. Start the PostgreSQL server and make sure you know the database user's name and password.
+
+Create or update `backend/.env` on your own computer with the settings below. Replace the example values with your local PostgreSQL details and a private JWT secret:
+
+```env
+PORT=3000
+DB_USER=postgres
+DB_HOST=localhost
+DB_NAME=fintrack
+DB_PASSWORD=your-local-postgres-password
+DB_PORT=5432
+JWT_SECRET=replace-this-with-a-long-private-value
+```
+
+Keep `backend/.env` private and do not upload real passwords or JWT secrets to GitHub. The setup script uses the database connection settings to create `DB_NAME` and its tables. The PostgreSQL user must have permission to create a database.
+
 ## Run the project
 
 1. Start PostgreSQL.
