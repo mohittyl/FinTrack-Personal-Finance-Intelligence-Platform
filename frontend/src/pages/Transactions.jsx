@@ -74,6 +74,16 @@ function Transactions() {
     setPage(1);
   }
 
+  function clearFilters() {
+    setSearch("");
+    setType("all");
+    setCategory("all");
+    setDateFrom("");
+    setDateTo("");
+    setSortBy("date-desc");
+    setPage(1);
+  }
+
   function money(value) {
     return new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 2 }).format(Number(value || 0));
   }
@@ -186,6 +196,7 @@ function Transactions() {
             <label>From <input type="date" value={dateFrom} onChange={(e) => changeFilter(setDateFrom, e.target.value)} /></label>
             <label>To <input type="date" value={dateTo} onChange={(e) => changeFilter(setDateTo, e.target.value)} /></label>
             <select value={sortBy} onChange={(e) => changeFilter(setSortBy, e.target.value)}><option value="date-desc">Newest first</option><option value="date-asc">Oldest first</option><option value="amount-high">Amount: high to low</option><option value="amount-low">Amount: low to high</option><option value="title-az">Title: A to Z</option><option value="title-za">Title: Z to A</option></select>
+            <button className="button button-secondary" onClick={clearFilters}>Clear filters</button>
           </div>
           <div className="transaction-table-wrap">
             {loading ? <p className="transactions-message">Loading transactions...</p> : transactions.length === 0 ? <p className="transactions-message">No transactions found.</p> : (
