@@ -15,8 +15,16 @@ router.get("/", authMiddleware, async (req, res) => {
     const page = Number(req.query.page || 1);
     const limit = Number(req.query.limit || 10);
 
-    if (page < 1 || page % 1 !== 0 || limit < 1 || limit > 100 || limit % 1 !== 0) {
-      return res.status(400).json({ error: "Page must be positive and limit must be between 1 and 100" });
+    if (
+      page < 1 ||
+      page % 1 !== 0 ||
+      limit < 1 ||
+      limit > 100 ||
+      limit % 1 !== 0
+    ) {
+      return res.status(400).json({
+        error: "Page must be positive and limit must be between 1 and 100",
+      });
     }
 
     const sort = getSort(req.query);
@@ -26,7 +34,11 @@ router.get("/", authMiddleware, async (req, res) => {
 
     // Count matching records so the page can show total records and pages.
     const countResult = await pool.query(
-      `SELECT COUNT(*) AS total FROM transactions WHERE ${filters.where}`,
+      `
+        SELECT COUNT(*) AS total
+        FROM transactions
+        WHERE ${filters.where}
+      `,
       filters.values
     );
     const total = Number(countResult.rows[0].total);
@@ -39,11 +51,21 @@ router.get("/", authMiddleware, async (req, res) => {
     const offsetNumber = values.length;
 
     const result = await pool.query(
-      `SELECT id, title, category, type, amount, transaction_date, created_at
-       FROM transactions
-       WHERE ${filters.where}
-       ORDER BY ${sort.column} ${sort.order}, id DESC
-       LIMIT $${limitNumber} OFFSET $${offsetNumber}`,
+      `
+        SELECT
+          id,
+          title,
+          category,
+          type,
+          amount,
+          transaction_date,
+          created_at
+        FROM transactions
+        WHERE ${filters.where}
+        ORDER BY ${sort.column} ${sort.order}, id DESC
+        LIMIT $${limitNumber}
+        OFFSET $${offsetNumber}
+      `,
       values
     );
 
@@ -51,6 +73,7 @@ router.get("/", authMiddleware, async (req, res) => {
     res.set("X-Page", String(page));
     res.set("X-Limit", String(limit));
     res.set("X-Total-Pages", String(Math.ceil(total / limit)));
+
     return res.status(200).json(result.rows);
   } catch (error) {
     console.error("Get transactions error:", error);
@@ -62,10 +85,16 @@ router.get("/", authMiddleware, async (req, res) => {
 router.get("/categories", authMiddleware, async (req, res) => {
   try {
     const result = await pool.query(
-      "SELECT DISTINCT category FROM transactions WHERE user_id = $1 ORDER BY category",
+      `
+        SELECT DISTINCT category
+        FROM transactions
+        WHERE user_id = $1
+        ORDER BY category
+      `,
       [req.user.id]
     );
     const categories = [];
+
     for (let i = 0; i < result.rows.length; i += 1) {
       categories.push(result.rows[i].category);
     }
@@ -90,10 +119,17 @@ router.get("/export", authMiddleware, async (req, res) => {
     }
 
     const result = await pool.query(
-      `SELECT title, category, type, amount, transaction_date
-       FROM transactions
-       WHERE ${filters.where}
-       ORDER BY ${sort.column} ${sort.order}, id DESC`,
+      `
+        SELECT
+          title,
+          category,
+          type,
+          amount,
+          transaction_date
+        FROM transactions
+        WHERE ${filters.where}
+        ORDER BY ${sort.column} ${sort.order}, id DESC
+      `,
       filters.values
     );
 
@@ -111,7 +147,11 @@ router.get("/export", authMiddleware, async (req, res) => {
     }
 
     res.set("Content-Type", "text/csv; charset=utf-8");
-    res.set("Content-Disposition", 'attachment; filename="transactions.csv"');
+    res.set(
+      "Content-Disposition",
+      'attachment; filename="transactions.csv"'
+    );
+
     return res.status(200).send("\uFEFF" + csv);
   } catch (error) {
     console.error("Export transactions error:", error);
@@ -129,8 +169,14 @@ router.post("/", authMiddleware, async (req, res) => {
     const amount = Number(body.amount);
     const date = body.transaction_date;
 
-    if (!title || !category || (type !== "income" && type !== "expense")) {
-      return res.status(400).json({ error: "Enter title, category and a valid type" });
+    if (
+      !title ||
+      !category ||
+      (type !== "income" && type !== "expense")
+    ) {
+      return res.status(400).json({
+        error: "Enter title, category and a valid type",
+      });
     }
     if (isNaN(amount) || amount <= 0) {
       return res.status(400).json({ error: "Amount must be greater than zero" });
@@ -140,12 +186,32 @@ router.post("/", authMiddleware, async (req, res) => {
     }
 
     const result = await pool.query(
-      `INSERT INTO transactions (user_id, title, category, type, amount, transaction_date)
-       VALUES ($1, $2, $3, $4, $5, $6)
-       RETURNING id, title, category, type, amount, transaction_date, created_at`,
+      `
+        INSERT INTO transactions (
+          user_id,
+          title,
+          category,
+          type,
+          amount,
+          transaction_date
+        )
+        VALUES ($1, $2, $3, $4, $5, $6)
+        RETURNING
+          id,
+          title,
+          category,
+          type,
+          amount,
+          transaction_date,
+          created_at
+      `,
       [req.user.id, title, category, type, amount, date]
     );
-    return res.status(201).json({ message: "Transaction created successfully", transaction: result.rows[0] });
+
+    return res.status(201).json({
+      message: "Transaction created successfully",
+      transaction: result.rows[0],
+    });
   } catch (error) {
     console.error("Create transaction error:", error);
     return res.status(500).json({ error: "Unable to create transaction" });
@@ -166,8 +232,14 @@ router.put("/:id", authMiddleware, async (req, res) => {
     if (id < 1 || id % 1 !== 0) {
       return res.status(400).json({ error: "Invalid transaction id" });
     }
-    if (!title || !category || (type !== "income" && type !== "expense")) {
-      return res.status(400).json({ error: "Enter title, category and a valid type" });
+    if (
+      !title ||
+      !category ||
+      (type !== "income" && type !== "expense")
+    ) {
+      return res.status(400).json({
+        error: "Enter title, category and a valid type",
+      });
     }
     if (isNaN(amount) || amount <= 0) {
       return res.status(400).json({ error: "Amount must be greater than zero" });
@@ -177,16 +249,33 @@ router.put("/:id", authMiddleware, async (req, res) => {
     }
 
     const result = await pool.query(
-      `UPDATE transactions
-       SET title = $1, category = $2, type = $3, amount = $4, transaction_date = $5
-       WHERE id = $6 AND user_id = $7
-       RETURNING id, title, category, type, amount, transaction_date, created_at`,
+      `
+        UPDATE transactions
+        SET
+          title = $1,
+          category = $2,
+          type = $3,
+          amount = $4,
+          transaction_date = $5
+        WHERE id = $6 AND user_id = $7
+        RETURNING
+          id,
+          title,
+          category,
+          type,
+          amount,
+          transaction_date,
+          created_at
+      `,
       [title, category, type, amount, date, id, req.user.id]
     );
     if (result.rows.length === 0) {
       return res.status(404).json({ error: "Transaction not found" });
     }
-    return res.status(200).json({ message: "Transaction updated successfully", transaction: result.rows[0] });
+    return res.status(200).json({
+      message: "Transaction updated successfully",
+      transaction: result.rows[0],
+    });
   } catch (error) {
     console.error("Update transaction error:", error);
     return res.status(500).json({ error: "Unable to update transaction" });
@@ -202,7 +291,11 @@ router.delete("/:id", authMiddleware, async (req, res) => {
     }
 
     const result = await pool.query(
-      "DELETE FROM transactions WHERE id = $1 AND user_id = $2 RETURNING id",
+      `
+        DELETE FROM transactions
+        WHERE id = $1 AND user_id = $2
+        RETURNING id
+      `,
       [id, req.user.id]
     );
     if (result.rows.length === 0) {
@@ -222,8 +315,14 @@ function getFilters(query, userId) {
 
   if (query.search) {
     values.push("%" + String(query.search).trim() + "%");
-    where += " AND (title ILIKE $" + values.length + " OR category ILIKE $" + values.length + ")";
+    where +=
+      " AND (title ILIKE $" +
+      values.length +
+      " OR category ILIKE $" +
+      values.length +
+      ")";
   }
+
   if (query.type && query.type !== "all") {
     if (query.type !== "income" && query.type !== "expense") {
       return { error: "Type must be income or expense" };
@@ -231,10 +330,12 @@ function getFilters(query, userId) {
     values.push(query.type);
     where += " AND type = $" + values.length;
   }
+
   if (query.category && query.category !== "all") {
     values.push(query.category);
     where += " AND category = $" + values.length;
   }
+
   if (query.dateFrom) {
     if (!isValidDate(query.dateFrom)) {
       return { error: "Enter a valid start date" };
@@ -242,6 +343,7 @@ function getFilters(query, userId) {
     values.push(query.dateFrom);
     where += " AND transaction_date >= $" + values.length;
   }
+
   if (query.dateTo) {
     if (!isValidDate(query.dateTo)) {
       return { error: "Enter a valid end date" };
@@ -252,6 +354,7 @@ function getFilters(query, userId) {
     values.push(query.dateTo);
     where += " AND transaction_date <= $" + values.length;
   }
+
   return { where: where, values: values };
 }
 
@@ -272,6 +375,7 @@ function getSort(query) {
   } else if (query.order && query.order !== "desc") {
     return { error: "Order must be asc or desc" };
   }
+
   return { column: column, order: order };
 }
 
