@@ -178,8 +178,20 @@ router.post("/", authMiddleware, async (req, res) => {
         error: "Enter title, category and a valid type",
       });
     }
-    if (isNaN(amount) || amount <= 0) {
-      return res.status(400).json({ error: "Amount must be greater than zero" });
+    if (title.length > 150) {
+      return res.status(400).json({
+        error: "Title cannot be longer than 150 characters",
+      });
+    }
+    if (category.length > 100) {
+      return res.status(400).json({
+        error: "Category cannot be longer than 100 characters",
+      });
+    }
+    if (isNaN(amount) || amount <= 0 || amount > 9999999999.99) {
+      return res.status(400).json({
+        error: "Amount must be greater than zero and within the allowed limit",
+      });
     }
     if (!isValidDate(date)) {
       return res.status(400).json({ error: "Enter a valid transaction date" });
@@ -241,8 +253,20 @@ router.put("/:id", authMiddleware, async (req, res) => {
         error: "Enter title, category and a valid type",
       });
     }
-    if (isNaN(amount) || amount <= 0) {
-      return res.status(400).json({ error: "Amount must be greater than zero" });
+    if (title.length > 150) {
+      return res.status(400).json({
+        error: "Title cannot be longer than 150 characters",
+      });
+    }
+    if (category.length > 100) {
+      return res.status(400).json({
+        error: "Category cannot be longer than 100 characters",
+      });
+    }
+    if (isNaN(amount) || amount <= 0 || amount > 9999999999.99) {
+      return res.status(400).json({
+        error: "Amount must be greater than zero and within the allowed limit",
+      });
     }
     if (!isValidDate(date)) {
       return res.status(400).json({ error: "Enter a valid transaction date" });
@@ -390,8 +414,18 @@ function isValidDate(value) {
   if (!value) {
     return false;
   }
-  const date = new Date(value);
-  return !isNaN(date.getTime());
+
+  const dateText = String(value);
+  if (dateText.length !== 10) {
+    return false;
+  }
+
+  const date = new Date(dateText);
+  if (isNaN(date.getTime())) {
+    return false;
+  }
+
+  return date.toISOString().slice(0, 10) === dateText;
 }
 
 module.exports = router;
