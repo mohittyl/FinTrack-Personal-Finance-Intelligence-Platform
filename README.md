@@ -118,8 +118,27 @@ The route uses parameterized SQL for filters and only allows known sort columns,
 
 1. Log in and copy the returned token.
 2. In Postman, set the request header to `Authorization: Bearer <token>`.
-3. Send a `POST /api/transactions` request with JSON fields `title`, `category`, `type`, `amount`, and `transaction_date`.
-4. Try the example `GET` request above, then use the `PUT` and `DELETE` routes with the created transaction ID.
+3. Send a `POST /api/transactions` request with this JSON body:
+
+   ```json
+   {
+     "title": "Lunch",
+     "category": "Food",
+     "type": "expense",
+     "amount": 250,
+     "transaction_date": "2026-01-15"
+   }
+   ```
+
+4. Try the example `GET` request above. Use the ID from the `POST` response in the `PUT /api/transactions/:id` and `DELETE /api/transactions/:id` routes.
 5. Open the export route in Postman to check the CSV response.
 
 For a viva explanation: `req.query` contains search/filter/page options, `$1` placeholders safely pass values to PostgreSQL, and `LIMIT`/`OFFSET` select one page of records.
+
+## Troubleshooting
+
+- **Database connection refused:** start PostgreSQL and check `DB_HOST` and `DB_PORT` in `backend/.env`.
+- **Database password error:** check `DB_USER` and `DB_PASSWORD` in `backend/.env`.
+- **Tables are missing:** stop the backend, run `npm run db:setup` from the `backend` folder, then start it again.
+- **Port is already in use:** stop the other process using that port, or set a different backend `PORT` in `backend/.env`.
+- **API says the token is invalid:** log in again and retry with the latest token.
