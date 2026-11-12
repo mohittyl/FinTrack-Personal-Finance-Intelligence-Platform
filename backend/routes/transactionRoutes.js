@@ -74,7 +74,14 @@ router.get("/", authMiddleware, async (req, res) => {
     res.set("X-Limit", String(limit));
     res.set("X-Total-Pages", String(Math.ceil(total / limit)));
 
-    return res.status(200).json(result.rows);
+    const transactions = [];
+    for (let i = 0; i < result.rows.length; i += 1) {
+      const transaction = result.rows[i];
+      transaction.amount = Number(transaction.amount);
+      transactions.push(transaction);
+    }
+
+    return res.status(200).json(transactions);
   } catch (error) {
     console.error("Get transactions error:", error);
     return res.status(500).json({ error: "Unable to fetch transactions" });
