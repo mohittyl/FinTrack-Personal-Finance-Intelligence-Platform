@@ -3,6 +3,7 @@ import { Download, Pencil, Plus, Trash2, X } from "lucide-react";
 import Sidebar from "../components/Sidebar";
 import Navbar from "../components/Navbar";
 import api from "../services/api";
+import "./Transactions.css";
 
 const pageSize = 10;
 
