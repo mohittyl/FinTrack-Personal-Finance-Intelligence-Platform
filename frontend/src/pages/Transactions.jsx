@@ -119,8 +119,15 @@ function Transactions() {
   async function saveTransaction(event) {
     event.preventDefault();
     const amount = Number(formData.amount);
-    if (!formData.title.trim() || !formData.category.trim() || amount <= 0 || !formData.transaction_date) {
-      setError("Enter a title, category, positive amount and date.");
+    if (
+      !formData.title.trim() ||
+      !formData.category.trim() ||
+      isNaN(amount) ||
+      amount <= 0 ||
+      amount > 9999999999.99 ||
+      !formData.transaction_date
+    ) {
+      setError("Enter a title, category, valid amount and date.");
       return;
     }
 
@@ -216,7 +223,7 @@ function Transactions() {
           {!loading && total > 0 && <div className="pagination"><span>Showing {(page - 1) * pageSize + 1}–{Math.min(page * pageSize, total)} of {total}</span><div><button disabled={page === 1} onClick={() => setPage(page - 1)}>Previous</button><span>Page {page} of {totalPages}</span><button disabled={page >= totalPages} onClick={() => setPage(page + 1)}>Next</button></div></div>}
         </section>
       </main>
-      {showForm && <div className="modal-backdrop" onMouseDown={(e) => { if (e.target === e.currentTarget) closeForm(); }}><section className="transaction-modal"><div className="modal-heading"><div><h2>{editingId ? "Edit Transaction" : "Add Transaction"}</h2><p>Enter the transaction details.</p></div><button className="icon-button" onClick={closeForm} disabled={saving}><X size={20} /></button></div><form onSubmit={saveTransaction}>{error && <p className="form-error">{error}</p>}<label>Type<select value={formData.type} onChange={(e) => setFormData({ ...formData, type: e.target.value })}><option value="expense">Expense</option><option value="income">Income</option></select></label><label>Title<input maxLength={150} required value={formData.title} onChange={(e) => setFormData({ ...formData, title: e.target.value })} /></label><label>Category<input maxLength={100} required value={formData.category} onChange={(e) => setFormData({ ...formData, category: e.target.value })} /></label><label>Amount<input type="number" min="0.01" step="0.01" required value={formData.amount} onChange={(e) => setFormData({ ...formData, amount: e.target.value })} /></label><label>Date<input type="date" required value={formData.transaction_date} onChange={(e) => setFormData({ ...formData, transaction_date: e.target.value })} /></label><div className="modal-actions"><button type="button" className="button button-secondary" onClick={closeForm} disabled={saving}>Cancel</button><button type="submit" className="button button-primary" disabled={saving}>{saving ? "Saving..." : editingId ? "Save Changes" : "Add Transaction"}</button></div></form></section></div>}
+      {showForm && <div className="modal-backdrop" onMouseDown={(e) => { if (e.target === e.currentTarget) closeForm(); }}><section className="transaction-modal"><div className="modal-heading"><div><h2>{editingId ? "Edit Transaction" : "Add Transaction"}</h2><p>Enter the transaction details.</p></div><button className="icon-button" onClick={closeForm} disabled={saving}><X size={20} /></button></div><form onSubmit={saveTransaction}>{error && <p className="form-error">{error}</p>}<label>Type<select value={formData.type} onChange={(e) => setFormData({ ...formData, type: e.target.value })}><option value="expense">Expense</option><option value="income">Income</option></select></label><label>Title<input maxLength={150} required value={formData.title} onChange={(e) => setFormData({ ...formData, title: e.target.value })} /></label><label>Category<input maxLength={100} required value={formData.category} onChange={(e) => setFormData({ ...formData, category: e.target.value })} /></label><label>Amount<input type="number" min="0.01" max="9999999999.99" step="0.01" required value={formData.amount} onChange={(e) => setFormData({ ...formData, amount: e.target.value })} /></label><label>Date<input type="date" required value={formData.transaction_date} onChange={(e) => setFormData({ ...formData, transaction_date: e.target.value })} /></label><div className="modal-actions"><button type="button" className="button button-secondary" onClick={closeForm} disabled={saving}>Cancel</button><button type="submit" className="button button-primary" disabled={saving}>{saving ? "Saving..." : editingId ? "Save Changes" : "Add Transaction"}</button></div></form></section></div>}
     </div>
   );
 }
