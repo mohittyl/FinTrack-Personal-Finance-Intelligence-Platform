@@ -205,12 +205,12 @@ function Transactions() {
         <section className="history-section">
           <div className="history-heading"><div><h2>Transaction history</h2><p>{total} transaction(s)</p></div><button className="button button-secondary" onClick={exportCSV} disabled={!total}><Download size={16} /> Export CSV</button></div>
           <div className="transaction-controls">
-            <input type="search" placeholder="Search title or category" value={search} onChange={(e) => changeFilter(setSearch, e.target.value)} />
-            <select value={type} onChange={(e) => changeFilter(setType, e.target.value)}><option value="all">All types</option><option value="income">Income</option><option value="expense">Expense</option></select>
-            <select value={category} onChange={(e) => changeFilter(setCategory, e.target.value)}><option value="all">All categories</option>{categories.map((name) => <option key={name} value={name}>{name}</option>)}</select>
-            <label>From <input type="date" value={dateFrom} onChange={(e) => changeFilter(setDateFrom, e.target.value)} /></label>
-            <label>To <input type="date" value={dateTo} onChange={(e) => changeFilter(setDateTo, e.target.value)} /></label>
-            <select value={sortBy} onChange={(e) => changeFilter(setSortBy, e.target.value)}><option value="date-desc">Newest first</option><option value="date-asc">Oldest first</option><option value="amount-high">Amount: high to low</option><option value="amount-low">Amount: low to high</option><option value="title-az">Title: A to Z</option><option value="title-za">Title: Z to A</option></select>
+            <input type="search" aria-label="Search title or category" placeholder="Search title or category" value={search} onChange={(e) => changeFilter(setSearch, e.target.value)} />
+            <select aria-label="Filter by type" value={type} onChange={(e) => changeFilter(setType, e.target.value)}><option value="all">All types</option><option value="income">Income</option><option value="expense">Expense</option></select>
+            <select aria-label="Filter by category" value={category} onChange={(e) => changeFilter(setCategory, e.target.value)}><option value="all">All categories</option>{categories.map((name) => <option key={name} value={name}>{name}</option>)}</select>
+            <label>From <input type="date" aria-label="Start date" max={dateTo || undefined} value={dateFrom} onChange={(e) => changeFilter(setDateFrom, e.target.value)} /></label>
+            <label>To <input type="date" aria-label="End date" min={dateFrom || undefined} value={dateTo} onChange={(e) => changeFilter(setDateTo, e.target.value)} /></label>
+            <select aria-label="Sort transactions" value={sortBy} onChange={(e) => changeFilter(setSortBy, e.target.value)}><option value="date-desc">Newest first</option><option value="date-asc">Oldest first</option><option value="amount-high">Amount: high to low</option><option value="amount-low">Amount: low to high</option><option value="title-az">Title: A to Z</option><option value="title-za">Title: Z to A</option></select>
             <button className="button button-secondary" onClick={clearFilters}>Clear filters</button>
           </div>
           <div className="transaction-table-wrap">
