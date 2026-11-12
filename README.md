@@ -142,3 +142,25 @@ For a viva explanation: `req.query` contains search/filter/page options, `$1` pl
 - **Tables are missing:** stop the backend, run `npm run db:setup` from the `backend` folder, then start it again.
 - **Port is already in use:** stop the other process using that port, or set a different backend `PORT` in `backend/.env`.
 - **API says the token is invalid:** log in again and retry with the latest token.
+
+- # FinTrack
+
+FinTrack is a full-stack personal finance project. A user can record income and expenses, set budgets and savings goals, and review their activity.
+
+## How the project works
+
+1. The user opens the React frontend and signs in.
+2. The frontend sends requests to the Express API.
+3. The API checks the user's JWT and reads or saves data in PostgreSQL.
+4. The API returns data as JSON. The frontend displays it in the app.
+
+The backend uses Express routes to handle API requests. PostgreSQL queries use the `pg` package. Passwords are hashed with `bcryptjs`, and JWTs are used to identify the logged-in user.
+
+## Project modules
+
+- **Transactions:** create, edit, delete, search, filter, sort, paginate, and export transactions as CSV.
+- **Budgets:** set spending limits by category and month.
+- **Goals:** track savings targets.
+- **Recurring payments:** record repeating payments.
+- **Dashboard and analytics:** review totals and income/expense activity.
+- **Settings:** update account details.
