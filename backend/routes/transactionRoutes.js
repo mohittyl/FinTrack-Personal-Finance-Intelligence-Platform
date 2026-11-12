@@ -336,9 +336,10 @@ router.delete("/:id", authMiddleware, async (req, res) => {
 function getFilters(query, userId) {
   const values = [userId];
   let where = "user_id = $1";
+  const search = String(query.search || "").trim();
 
-  if (query.search) {
-    values.push("%" + String(query.search).trim() + "%");
+  if (search) {
+    values.push("%" + search + "%");
     where +=
       " AND (title ILIKE $" +
       values.length +
@@ -355,8 +356,10 @@ function getFilters(query, userId) {
     where += " AND type = $" + values.length;
   }
 
-  if (query.category && query.category !== "all") {
-    values.push(query.category);
+  const category = String(query.category || "").trim();
+
+  if (category && category !== "all") {
+    values.push(category);
     where += " AND category = $" + values.length;
   }
 
