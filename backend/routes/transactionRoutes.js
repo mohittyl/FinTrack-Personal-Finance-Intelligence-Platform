@@ -204,28 +204,6 @@ router.post("/", authMiddleware, async (req, res) => {
       return res.status(400).json({ error: "Enter a valid transaction date" });
     }
 
-    const result = await pool.query(
-      `
-        INSERT INTO transactions (
-          user_id,
-          title,
-          category,
-          type,
-          amount,
-          transaction_date
-        )
-        VALUES ($1, $2, $3, $4, $5, $6)
-        RETURNING
-          id,
-          title,
-          category,
-          type,
-          amount,
-          transaction_date,
-          created_at
-      `,
-      [req.user.id, title, category, type, amount, date]
-    );
 
     return res.status(201).json({
       message: "Transaction created successfully",
