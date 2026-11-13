@@ -4,7 +4,7 @@ const authMiddleware = require("../middleware/authMiddleware");
 
 const router = express.Router();
 
-// Return only transactions that belong to the logged-in user.
+// JWT check ke baad req.user.id milta hai, isliye user sirf apne records dekhega.
 router.get("/", authMiddleware, async (req, res) => {
   try {
     const filters = getFilters(req.query, req.user.id);
@@ -12,9 +12,11 @@ router.get("/", authMiddleware, async (req, res) => {
       return res.status(400).json({ error: filters.error });
     }
 
+    // URL se page aur limit text ke form mein aate hain, Number unhe number banata hai.
     const page = Number(req.query.page || 1);
     const limit = Number(req.query.limit || 10);
 
+    // Page aur limit poore numbers hone chahiye, decimal nahi.
     if (
       page < 1 ||
       page % 1 !== 0 ||
@@ -32,7 +34,7 @@ router.get("/", authMiddleware, async (req, res) => {
       return res.status(400).json({ error: sort.error });
     }
 
-    // Count matching records so the page can show total records and pages.
+    // Pehle matching rows count karte hain, total pages dikhane ke liye.
     const countResult = await pool.query(
       `
         SELECT COUNT(*) AS total
@@ -42,13 +44,15 @@ router.get("/", authMiddleware, async (req, res) => {
       filters.values
     );
     const total = Number(countResult.rows[0].total);
+    // Page 1 ka offset 0, page 2 ka offset 10 hota hai (default limit 10).
     const offset = (page - 1) * limit;
 
+    // Filter values ke baad SQL mein limit aur offset ke number aate hain.
+    const limitNumber = filters.values.length + 1;
+    const offsetNumber = filters.values.length + 2;
     const values = filters.values.slice();
     values.push(limit);
     values.push(offset);
-    const limitNumber = values.length - 1;
-    const offsetNumber = values.length;
 
     const result = await pool.query(
       `
@@ -69,11 +73,13 @@ router.get("/", authMiddleware, async (req, res) => {
       values
     );
 
+    // Ye headers frontend ko total count aur current page batate hain.
     res.set("X-Total-Count", String(total));
     res.set("X-Page", String(page));
     res.set("X-Limit", String(limit));
     res.set("X-Total-Pages", String(Math.ceil(total / limit)));
 
+    // PostgreSQL amount ko text bhejta hai; API response mein number bana rahe hain.
     const transactions = [];
     for (let i = 0; i < result.rows.length; i += 1) {
       const transaction = result.rows[i];
@@ -88,7 +94,7 @@ router.get("/", authMiddleware, async (req, res) => {
   }
 });
 
-// Get the user's categories for the category filter dropdown.
+// Logged-in user ki categories bhejte hain, dropdown bharne ke liye.
 router.get("/categories", authMiddleware, async (req, res) => {
   try {
     const result = await pool.query(
