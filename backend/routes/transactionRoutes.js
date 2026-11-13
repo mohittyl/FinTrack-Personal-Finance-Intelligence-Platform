@@ -191,6 +191,7 @@ router.post("/", authMiddleware, async (req, res) => {
         error: "Enter title, category and a valid type",
       });
     }
+    // Ye limits database ke title aur category columns ke size ke barabar hain.
     if (title.length > 150) {
       return res.status(400).json({
         error: "Title cannot be longer than 150 characters",
@@ -201,6 +202,7 @@ router.post("/", authMiddleware, async (req, res) => {
         error: "Category cannot be longer than 100 characters",
       });
     }
+    // Amount positive ho aur database ki NUMERIC(12, 2) limit mein rahe.
     if (isNaN(amount) || amount <= 0 || amount > 9999999999.99) {
       return res.status(400).json({
         error: "Amount must be greater than zero and within the allowed limit",
@@ -210,6 +212,9 @@ router.post("/", authMiddleware, async (req, res) => {
       return res.status(400).json({ error: "Enter a valid transaction date" });
     }
 
+
+    // API mein amount number ke roop mein return karte hain.
+    result.rows[0].amount = Number(result.rows[0].amount);
 
     return res.status(201).json({
       message: "Transaction created successfully",
@@ -221,7 +226,7 @@ router.post("/", authMiddleware, async (req, res) => {
   }
 });
 
-// Edit a transaction only when it belongs to the logged-in user.
+// Transaction tabhi edit hogi jab uski ID aur logged-in user dono match karein.
 router.put("/:id", authMiddleware, async (req, res) => {
   try {
     const id = Number(req.params.id);
@@ -287,6 +292,10 @@ router.put("/:id", authMiddleware, async (req, res) => {
     if (result.rows.length === 0) {
       return res.status(404).json({ error: "Transaction not found" });
     }
+
+    // GET, POST aur PUT sab mein amount number hi milega.
+    result.rows[0].amount = Number(result.rows[0].amount);
+
     return res.status(200).json({
       message: "Transaction updated successfully",
       transaction: result.rows[0],
