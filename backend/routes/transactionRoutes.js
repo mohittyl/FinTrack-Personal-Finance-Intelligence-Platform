@@ -118,7 +118,7 @@ router.get("/categories", authMiddleware, async (req, res) => {
   }
 });
 
-// Download all matching transactions as a CSV file.
+// Same filters ke matching transactions ko CSV file mein download karte hain.
 router.get("/export", authMiddleware, async (req, res) => {
   try {
     const filters = getFilters(req.query, req.user.id);
@@ -172,7 +172,7 @@ router.get("/export", authMiddleware, async (req, res) => {
   }
 });
 
-// Add a transaction. The user ID comes from the verified JWT.
+// Nayi transaction add karte hain. User ID JWT se lete hain, body se nahi.
 router.post("/", authMiddleware, async (req, res) => {
   try {
     const body = req.body || {};
@@ -306,7 +306,7 @@ router.put("/:id", authMiddleware, async (req, res) => {
   }
 });
 
-// Delete only the logged-in user's transaction.
+// Sirf logged-in user ki transaction delete hoti hai.
 router.delete("/:id", authMiddleware, async (req, res) => {
   try {
     const id = Number(req.params.id);
@@ -332,20 +332,19 @@ router.delete("/:id", authMiddleware, async (req, res) => {
   }
 });
 
-// Build the WHERE part and values for search and filters.
+// Search/filter ke liye WHERE SQL aur uski values banate hain.
 function getFilters(query, userId) {
+  // Pehli value hamesha logged-in user ID hai.
   const values = [userId];
   let where = "user_id = $1";
   const search = String(query.search || "").trim();
 
   if (search) {
     values.push("%" + search + "%");
-    where +=
-      " AND (title ILIKE $" +
-      values.length +
-      " OR category ILIKE $" +
-      values.length +
-      ")";
+    // Values ki ginti se SQL placeholder number milta hai ($2, $3...).
+    const searchNumber = values.length;
+    where += " AND (title ILIKE $" + searchNumber;
+    where += " OR category ILIKE $" + searchNumber + ")";
   }
 
   if (query.type && query.type !== "all") {
@@ -353,6 +352,7 @@ function getFilters(query, userId) {
       return { error: "Type must be income or expense" };
     }
     values.push(query.type);
+    // $1, $2 jaise placeholders user input ko SQL se alag rakhte hain.
     where += " AND type = $" + values.length;
   }
 
@@ -385,7 +385,7 @@ function getFilters(query, userId) {
   return { where: where, values: values };
 }
 
-// Sorting uses only three fixed database column names.
+// SQL mein column name direct aata hai, isliye sirf fixed safe options rakhte hain.
 function getSort(query) {
   let column = "transaction_date";
   if (query.sortBy === "amount") {
@@ -406,13 +406,25 @@ function getSort(query) {
   return { column: column, order: order };
 }
 
-// CSV cells are wrapped in quotes; inner quotes are doubled as required by CSV.
+// CSV mein comma ho sakta hai, isliye value quotes mein rakhte hain.
+// Value ke andar quote ho to CSV rule ke hisaab se usse double karte hain.
 function csvCell(value) {
   const text = String(value || "");
-  return '"' + text.split('"').join('""') + '"';
+  let safeText = "";
+
+  for (let i = 0; i < text.length; i += 1) {
+    if (text[i] === '"') {
+      safeText += '""';
+    } else {
+      safeText += text[i];
+    }
+  }
+
+  return '"' + safeText + '"';
 }
 
-// Keep date checking short and readable.
+// Simple date check: date ban pa rahi ho aur same date wapas mile.
+// Isse Feb 30 jaisi invalid date bhi reject hoti hai.
 function isValidDate(value) {
   if (!value) {
     return false;
