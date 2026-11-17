@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FinTrack — Account Settings</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <!-- Frosted Glass Navbar -->
+  <header class="navbar" id="navbar"></header>
+
+  <main class="container">
+    <!-- Profile Hero Card -->
+    <div class="profile-hero">
+      <div class="avatar" id="avatarCircle">?</div>
+      <div class="profile-meta">
+        <h2 id="displayName">User Profile</h2>
+        <div class="profile-chips" id="info">Loading profile details…</div>
+      </div>
+    </div>
+
+    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px;">
+      <!-- 1. Update Profile Details -->
+      <div class="card" style="margin-bottom:0;">
+        <div class="card-header">
+          <div class="icon">👤</div>
+          <h3>Personal Information</h3>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Full Name</label>
+          <input id="pName" placeholder="Your full name" />
+        </div>
+        <button id="saveName" class="btn">💾 Save Changes</button>
+        <p id="nameMsg" class="error"></p>
+      </div>
+
+      <!-- 2. Change Password -->
+      <div class="card" style="margin-bottom:0;">
+        <div class="card-header">
+          <div class="icon">🔐</div>
+          <h3>Security & Password</h3>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Current Password</label>
+          <input id="oldPass" type="password" placeholder="Enter current password" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">New Password</label>
+          <input id="newPass" type="password" placeholder="Minimum 6 characters" />
+        </div>
+        <button id="savePass" class="btn">🔄 Update Password</button>
+        <p id="passMsg" class="error"></p>
+      </div>
+    </div>
+
+    <!-- 3. Danger Zone -->
+    <div class="card danger-card" style="margin-top: 24px;">
+      <div class="card-header danger-header">
+        <div class="icon">⚠️</div>
+        <h3>Danger Zone</h3>
+      </div>
+      <p class="muted" style="margin-bottom: 14px;">
+        Deleting your account is permanent. All your data will be permanently wiped from the database.
+      </p>
+      <div style="max-width: 440px;">
+        <div class="form-group">
+          <label class="form-label" style="color:var(--danger-text);">Confirm with Your Password</label>
+          <input id="delPass" type="password" placeholder="Enter your password to confirm" />
+        </div>
+        <button id="delBtn" class="btn danger">🗑️ Permanently Delete Account</button>
+        <p id="delMsg" class="error"></p>
+      </div>
+    </div>
+  </main>
+
+  <!-- Toast Notification Container -->
+  <div id="toast"></div>
+
+  <script src="js/common.js"></script>
+  <script src="js/profile.js"></script>
+</body>
+</html>
