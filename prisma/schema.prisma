@@ -8,10 +8,44 @@ datasource db {
 }
 
 model User {
-  id        Int      @id @default(autoincrement())
-  name      String
-  email     String   @unique
-  password  String   // bcrypt hashed password
-  role      String   @default("user") // "user" or "admin"
-  createdAt DateTime @default(now())
+  id           Int           @id @default(autoincrement())
+  name         String
+  email        String        @unique
+  password     String        // bcrypt hashed password
+  role         String        @default("user") // "user" or "admin"
+  createdAt    DateTime      @default(now())
+  transactions Transaction[]
+  budgets      Budget[]
+  goals        Goal[]
+}
+
+model Transaction {
+  id       Int      @id @default(autoincrement())
+  title    String
+  amount   Float
+  type     String   // "income" or "expense"
+  category String
+  date     DateTime @default(now())
+  userId   Int
+  user     User     @relation(fields: [userId], references: [id])
+}
+
+model Budget {
+  id       Int    @id @default(autoincrement())
+  category String
+  limit    Float
+  month    String // "2026-11"
+  userId   Int
+  user     User   @relation(fields: [userId], references: [id])
+
+  @@unique([userId, category, month])
+}
+
+model Goal {
+  id     Int    @id @default(autoincrement())
+  title  String
+  target Float
+  saved  Float  @default(0)
+  userId Int
+  user   User   @relation(fields: [userId], references: [id])
 }

@@ -83,9 +83,11 @@ function renderNavbar() {
   var isAdmin = localStorage.getItem("role") === "admin";
   var currentPath = window.location.pathname;
 
+  var isDashboard = currentPath.indexOf("dashboard") !== -1;
   var isProfile = currentPath.indexOf("profile") !== -1;
   var isAdminPage = currentPath.indexOf("admin") !== -1;
 
+  var dashboardClass = isDashboard ? "nav-link active" : "nav-link";
   var profileClass = isProfile ? "nav-link active" : "nav-link";
   var adminClass = isAdminPage ? "nav-link active" : "nav-link";
 
@@ -99,11 +101,17 @@ function renderNavbar() {
     '  <span>FinTrack</span>' +
     '</div>' +
     '<div class="navbar-menu">' +
+    '  <a href="dashboard.html" class="' + dashboardClass + '"><span>📊</span> Dashboard</a>' +
     '  <a href="profile.html" class="' + profileClass + '"><span>👤</span> Profile</a>' +
     "  " + adminLink +
     '  <div class="navbar-divider"></div>' +
     '  <button class="btn small gray" onclick="logout()">🚪 Sign Out</button>' +
     '</div>';
+}
+
+// Indian Rupee currency formatter
+function money(n) {
+  return "₹" + Number(n || 0).toLocaleString("en-IN");
 }
 
 // Initials generation for user avatar circle

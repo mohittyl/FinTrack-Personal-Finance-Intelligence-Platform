@@ -31,6 +31,9 @@ app.use("/api/auth", require("./routes/auth"));
 // Admin routes: Users list, search, role change, user delete
 app.use("/api/admin", require("./routes/admin"));
 
+// Member 4: Financial Dashboard & Reports (monthly, trends, category analysis)
+app.use("/api/reports", require("./routes/reports"));
+
 // Step 8: Global Error Handler (agar koi unexpected error aaye)
 app.use(function (err, req, res, next) {
   console.error("Server Error:", err);
