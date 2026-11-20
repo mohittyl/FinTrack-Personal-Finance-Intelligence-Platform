@@ -1,240 +1,253 @@
-// ============================================================
-// MEMBER 4: Financial Dashboard & Reports
-// APIs: Monthly Reports, Category-wise Analysis, 6-Month Trend, Dashboard Summary
-// Protected by auth middleware
-// ============================================================
+const express = require("express");
+const prisma = require("../lib/prisma");
+const auth = require("../middleware/auth");
 
-var express = require("express");
-var prisma = require("../lib/prisma");
-var auth = require("../middleware/auth");
-var dateUtils = require("../lib/dates");
-
-var router = express.Router();
+const router = express.Router();
 router.use(auth);
 
-var MONTH_NAMES = [
+// Mahino ke naam (Simple Array)
+const monthsFull = [
   "January", "February", "March", "April", "May", "June",
   "July", "August", "September", "October", "November", "December"
 ];
-var MONTH_SHORT = [
+const monthsShort = [
   "Jan", "Feb", "Mar", "Apr", "May", "Jun",
   "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
 ];
 
-function formatMonthLabel(mStr, short) {
-  if (!mStr || typeof mStr !== "string" || mStr.indexOf("-") === -1) return mStr || "";
-  var parts = mStr.split("-").map(Number);
-  var y = parts[0];
-  var m = parts[1];
-  if (m >= 1 && m <= 12) {
-    var names = short ? MONTH_SHORT : MONTH_NAMES;
-    return names[m - 1] + " " + y;
-  }
-  return mStr;
+// 1. "2026-11" ko "November 2026" ya "Nov 2026" me convert karna
+function formatMonth(str, isShort = false) {
+  if (!str) return "";
+  const parts = str.split("-");
+  const year = parts[0];
+  const monthNum = parseInt(parts[1], 10);
+  const list = isShort ? monthsShort : monthsFull;
+  return list[monthNum - 1] ? list[monthNum - 1] + " " + year : str;
 }
 
-function sanitizeMonth(m) {
-  if (m && typeof m === "string" && /^\d{4}-\d{2}$/.test(m.trim())) {
-    return m.trim();
-  }
-  return dateUtils.currentMonth();
+// 2. Aaj ka current month nikalna jaise "2026-11"
+function getCurrentMonth() {
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, "0");
+  return y + "-" + m;
 }
 
-// ========== 1. MONTHLY REPORT (GET /api/reports/monthly?month=2026-11) ==========
-router.get("/monthly", async function (req, res) {
-  var month = sanitizeMonth(req.query.month);
-  var range = dateUtils.monthRange(month);
+// 3. Kisi date ko "YYYY-MM" string me convert karna
+function toMonthKey(date) {
+  const d = new Date(date);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  return y + "-" + m;
+}
 
-  var results = await Promise.all([
+// 4. Mahine ki start date aur end date nikalna
+function getMonthRange(monthStr) {
+  const parts = monthStr.split("-");
+  const year = parseInt(parts[0], 10);
+  const mon = parseInt(parts[1], 10);
+  return {
+    start: new Date(year, mon - 1, 1),
+    end: new Date(year, mon, 1)
+  };
+}
+
+// 5. Pichla mahina nikalna (e.g. "2026-11" -> "2026-10")
+function getPrevMonth(monthStr) {
+  const parts = monthStr.split("-");
+  const year = parseInt(parts[0], 10);
+  const mon = parseInt(parts[1], 10);
+  const d = new Date(year, mon - 2, 1);
+  return toMonthKey(d);
+}
+
+// 6. Savings rate percentage me calculate karna
+function calcRate(income, expense) {
+  if (income <= 0) return 0;
+  return Number((((income - expense) / income) * 100).toFixed(1));
+}
+
+// ============================================================
+// API 1: MONTHLY REPORT (GET /api/reports/monthly?month=YYYY-MM)
+// ============================================================
+router.get("/monthly", async (req, res) => {
+  const month = req.query.month || getCurrentMonth();
+  const range = getMonthRange(month);
+
+  const prevMonth = getPrevMonth(month);
+  const prevRange = getMonthRange(prevMonth);
+
+  // Database se current aur previous month ka data ek sath fetch karna
+  const [transactions, budgets, prevTransactions] = await Promise.all([
     prisma.transaction.findMany({
       where: { userId: req.userId, date: { gte: range.start, lt: range.end } },
       orderBy: { date: "desc" }
     }),
     prisma.budget.findMany({
       where: { userId: req.userId, month: month }
+    }),
+    prisma.transaction.findMany({
+      where: { userId: req.userId, date: { gte: prevRange.start, lt: prevRange.end } }
     })
   ]);
 
-  var list = results[0];
-  var budgets = results[1];
-
-  var budgetMap = {};
-  for (var i = 0; i < budgets.length; i++) {
-    budgetMap[budgets[i].category] = budgets[i].limit;
+  // Budget category-wise mapping
+  const budgetMap = {};
+  for (const b of budgets) {
+    budgetMap[b.category] = b.limit;
   }
 
-  var income = 0;
-  var expense = 0;
-  var byCategory = {};
-  var incomeByCategory = {};
-  var categoryCounts = {};
-  var largestExpense = null;
+  // Transactions ka total calculate karna
+  let income = 0;
+  let expense = 0;
+  let incomeCount = 0;
+  let expenseCount = 0;
+  const byCategory = {};
+  const incomeByCategory = {};
+  const categoryCounts = {};
+  let largestExpense = null;
 
-  for (var j = 0; j < list.length; j++) {
-    var t = list[j];
+  for (const t of transactions) {
     if (t.type === "income") {
       income += t.amount;
+      incomeCount++;
       incomeByCategory[t.category] = (incomeByCategory[t.category] || 0) + t.amount;
     } else {
       expense += t.amount;
+      expenseCount++;
       byCategory[t.category] = (byCategory[t.category] || 0) + t.amount;
       categoryCounts[t.category] = (categoryCounts[t.category] || 0) + 1;
       if (!largestExpense || t.amount > largestExpense.amount) {
-        largestExpense = {
-          id: t.id,
-          title: t.title,
-          amount: t.amount,
-          category: t.category,
-          date: t.date
-        };
+        largestExpense = { id: t.id, title: t.title, amount: t.amount, category: t.category, date: t.date };
       }
     }
   }
 
-  var balance = income - expense;
-  var savingsRate = income > 0 ? Number((((income - expense) / income) * 100).toFixed(1)) : 0;
-
-  // Category-wise Analysis
-  var categoryKeys = Object.keys(byCategory);
-  var categoryAnalysis = [];
-  for (var k = 0; k < categoryKeys.length; k++) {
-    var cat = categoryKeys[k];
-    var amt = byCategory[cat];
-    var count = categoryCounts[cat] || 1;
-    var share = expense > 0 ? Number(((amt / expense) * 100).toFixed(1)) : 0;
-    var avg = Number((amt / count).toFixed(2));
-    var budget = budgetMap[cat] !== undefined ? budgetMap[cat] : null;
-    var isOverBudget = budget !== null ? amt > budget : false;
-    var remaining = budget !== null ? budget - amt : null;
+  // Category analysis tayyar karna
+  const categoryAnalysis = [];
+  for (const cat in byCategory) {
+    const amt = byCategory[cat];
+    const count = categoryCounts[cat] || 1;
+    const budget = budgetMap[cat] !== undefined ? budgetMap[cat] : null;
 
     categoryAnalysis.push({
       category: cat,
       amount: amt,
-      share: share,
+      share: expense > 0 ? Number(((amt / expense) * 100).toFixed(1)) : 0,
       count: count,
-      avg: avg,
+      avg: Number((amt / count).toFixed(2)),
       budget: budget,
       spent: amt,
-      remaining: remaining,
-      isOverBudget: isOverBudget
+      remaining: budget !== null ? budget - amt : null,
+      isOverBudget: budget !== null ? amt > budget : false
     });
   }
 
-  categoryAnalysis.sort(function (a, b) {
-    return b.amount - a.amount;
-  });
+  categoryAnalysis.sort((a, b) => b.amount - a.amount);
 
-  var topExpenseCategory = categoryAnalysis.length > 0 ? categoryAnalysis[0] : null;
-
-  // Month-over-Month (MoM) comparison
-  var monthParts = month.split("-").map(Number);
-  var prevDate = new Date(monthParts[0], monthParts[1] - 2, 1);
-  var prevMonthKey = dateUtils.monthKey(prevDate);
-  var prevRange = dateUtils.monthRange(prevMonthKey);
-
-  var prevList = await prisma.transaction.findMany({
-    where: { userId: req.userId, date: { gte: prevRange.start, lt: prevRange.end } }
-  });
-
-  var prevIncome = 0;
-  var prevExpense = 0;
-  for (var p = 0; p < prevList.length; p++) {
-    if (prevList[p].type === "income") prevIncome += prevList[p].amount;
-    else prevExpense += prevList[p].amount;
+  // Pichle mahine ka total
+  let prevIncome = 0;
+  let prevExpense = 0;
+  for (const t of prevTransactions) {
+    if (t.type === "income") prevIncome += t.amount;
+    else prevExpense += t.amount;
   }
-  var prevBalance = prevIncome - prevExpense;
 
-  var incomeDiff = income - prevIncome;
-  var expenseDiff = expense - prevExpense;
-  var balanceDiff = balance - prevBalance;
-  var incomeChangePct = prevIncome > 0 ? Number(((incomeDiff / prevIncome) * 100).toFixed(1)) : null;
-  var expenseChangePct = prevExpense > 0 ? Number(((expenseDiff / prevExpense) * 100).toFixed(1)) : null;
+  const balance = income - expense;
+  const prevBalance = prevIncome - prevExpense;
+  const incomeDiff = income - prevIncome;
+  const expenseDiff = expense - prevExpense;
 
   res.json({
     month: month,
-    monthLabel: formatMonthLabel(month, false),
+    monthLabel: formatMonth(month),
     income: income,
     expense: expense,
     balance: balance,
-    savingsRate: savingsRate,
+    savingsRate: calcRate(income, expense),
     byCategory: byCategory,
     incomeByCategory: incomeByCategory,
     categoryAnalysis: categoryAnalysis,
-    topExpenseCategory: topExpenseCategory,
+    topExpenseCategory: categoryAnalysis[0] || null,
     largestExpense: largestExpense,
-    count: list.length,
-    expenseCount: list.filter(function (t) { return t.type === "expense"; }).length,
-    incomeCount: list.filter(function (t) { return t.type === "income"; }).length,
-    transactions: list,
+    count: transactions.length,
+    expenseCount: expenseCount,
+    incomeCount: incomeCount,
+    transactions: transactions,
     comparison: {
-      prevMonth: prevMonthKey,
-      prevMonthLabel: formatMonthLabel(prevMonthKey, false),
+      prevMonth: prevMonth,
+      prevMonthLabel: formatMonth(prevMonth),
       prevIncome: prevIncome,
       prevExpense: prevExpense,
       prevBalance: prevBalance,
       incomeDiff: incomeDiff,
       expenseDiff: expenseDiff,
-      balanceDiff: balanceDiff,
-      incomeChangePct: incomeChangePct,
-      expenseChangePct: expenseChangePct
+      balanceDiff: balance - prevBalance,
+      incomeChangePct: prevIncome > 0 ? Number(((incomeDiff / prevIncome) * 100).toFixed(1)) : null,
+      expenseChangePct: prevExpense > 0 ? Number(((expenseDiff / prevExpense) * 100).toFixed(1)) : null
     }
   });
 });
 
-// ========== 2. INCOME VS EXPENSE TREND (GET /api/reports/trend?months=6) ==========
-router.get("/trend", async function (req, res) {
-  var count = Math.max(2, Math.min(24, Number(req.query.months) || 6));
-  var now = new Date();
-  var months = [];
-  for (var i = count - 1; i >= 0; i--) {
-    var d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-    var key = dateUtils.monthKey(d);
-    months.push({ key: key, label: formatMonthLabel(key, true) });
-  }
+// ============================================================
+// API 2: 6-MONTH TREND (GET /api/reports/trend?months=6)
+// ============================================================
+router.get("/trend", async (req, res) => {
+  const count = parseInt(req.query.months, 10) || 6;
+  const now = new Date();
 
-  var fromDate = new Date(now.getFullYear(), now.getMonth() - (count - 1), 1);
-  var list = await prisma.transaction.findMany({
-    where: { userId: req.userId, date: { gte: fromDate } },
-    orderBy: { date: "asc" }
-  });
+  // Last N mahino ki list banate hain
+  const trend = [];
+  const trendMap = {};
 
-  var result = months.map(function (m) {
-    return {
-      month: m.key,
-      label: m.label,
+  for (let i = count - 1; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const key = toMonthKey(d);
+    const item = {
+      month: key,
+      label: formatMonth(key, true),
       income: 0,
       expense: 0,
       balance: 0,
       savingsRate: 0
     };
+    trend.push(item);
+    trendMap[key] = item;
+  }
+
+  // Database se transactions laate hain
+  const fromDate = new Date(now.getFullYear(), now.getMonth() - (count - 1), 1);
+  const list = await prisma.transaction.findMany({
+    where: { userId: req.userId, date: { gte: fromDate } },
+    orderBy: { date: "asc" }
   });
 
-  for (var j = 0; j < list.length; j++) {
-    var t = list[j];
-    var mKey = dateUtils.monthKey(t.date);
-    for (var r = 0; r < result.length; r++) {
-      if (result[r].month === mKey && (t.type === "income" || t.type === "expense")) {
-        result[r][t.type] += t.amount;
-        break;
-      }
+  // Har transaction ko uske month me add karte hain
+  for (const t of list) {
+    const key = toMonthKey(t.date);
+    if (trendMap[key]) {
+      if (t.type === "income") trendMap[key].income += t.amount;
+      if (t.type === "expense") trendMap[key].expense += t.amount;
     }
   }
 
-  for (var k = 0; k < result.length; k++) {
-    var row = result[k];
+  // Balance aur savings rate calculate karte hain
+  for (const row of trend) {
     row.balance = row.income - row.expense;
-    row.savingsRate = row.income > 0 ? Number((((row.income - row.expense) / row.income) * 100).toFixed(1)) : 0;
+    row.savingsRate = calcRate(row.income, row.expense);
   }
 
-  res.json(result);
+  res.json(trend);
 });
 
-// ========== 3. CONSOLIDATED FINANCIAL DASHBOARD (GET /api/reports/dashboard?month=2026-11) ==========
-router.get("/dashboard", async function (req, res) {
-  var month = sanitizeMonth(req.query.month);
-  var range = dateUtils.monthRange(month);
+// ============================================================
+// API 3: DASHBOARD SUMMARY (GET /api/reports/dashboard?month=YYYY-MM)
+// ============================================================
+router.get("/dashboard", async (req, res) => {
+  const month = req.query.month || getCurrentMonth();
+  const range = getMonthRange(month);
 
-  var results = await Promise.all([
+  const [monthTx, recentTx, budgets, goals] = await Promise.all([
     prisma.transaction.findMany({
       where: { userId: req.userId, date: { gte: range.start, lt: range.end } },
       orderBy: { date: "desc" }
@@ -253,60 +266,68 @@ router.get("/dashboard", async function (req, res) {
     })
   ]);
 
-  var monthTx = results[0];
-  var recentTx = results[1];
-  var budgets = results[2];
-  var goals = results[3];
+  let income = 0;
+  let expense = 0;
+  const byCategory = {};
 
-  var income = 0;
-  var expense = 0;
-  var byCategory = {};
-  for (var i = 0; i < monthTx.length; i++) {
-    var t = monthTx[i];
-    if (t.type === "income") income += t.amount;
-    else {
+  for (const t of monthTx) {
+    if (t.type === "income") {
+      income += t.amount;
+    } else {
       expense += t.amount;
       byCategory[t.category] = (byCategory[t.category] || 0) + t.amount;
     }
   }
 
-  var budgetSummary = budgets.map(function (b) {
-    var spent = byCategory[b.category] || 0;
-    return {
+  // Budget vs Spent
+  const budgetSummary = [];
+  const budgetAlerts = [];
+
+  for (const b of budgets) {
+    const spent = byCategory[b.category] || 0;
+    const isOver = spent > b.limit;
+    const item = {
       id: b.id,
       category: b.category,
       limit: b.limit,
       month: b.month,
       spent: spent,
-      isOver: spent > b.limit
+      isOver: isOver
     };
-  });
+    budgetSummary.push(item);
+    if (isOver) {
+      budgetAlerts.push(item);
+    }
+  }
 
-  var overBudgets = budgetSummary.filter(function (b) { return b.isOver; });
-
-  var totalGoalTarget = goals.reduce(function (sum, g) { return sum + g.target; }, 0);
-  var totalGoalSaved = goals.reduce(function (sum, g) { return sum + g.saved; }, 0);
-  var goalProgress = totalGoalTarget > 0 ? Math.min(100, Math.round((totalGoalSaved / totalGoalTarget) * 100)) : 0;
+  // Goals progress
+  let totalTarget = 0;
+  let totalSaved = 0;
+  for (const g of goals) {
+    totalTarget += g.target;
+    totalSaved += g.saved;
+  }
+  const overallProgress = totalTarget > 0 ? Math.min(100, Math.round((totalSaved / totalTarget) * 100)) : 0;
 
   res.json({
     month: month,
-    monthLabel: formatMonthLabel(month, false),
+    monthLabel: formatMonth(month),
     summary: {
       income: income,
       expense: expense,
       balance: income - expense,
-      savingsRate: income > 0 ? Number((((income - expense) / income) * 100).toFixed(1)) : 0,
+      savingsRate: calcRate(income, expense),
       count: monthTx.length
     },
     byCategory: byCategory,
     recentTransactions: recentTx,
-    budgetAlerts: overBudgets,
+    budgetAlerts: budgetAlerts,
     budgets: budgetSummary,
     goals: {
       items: goals,
-      totalTarget: totalGoalTarget,
-      totalSaved: totalGoalSaved,
-      overallProgress: goalProgress
+      totalTarget: totalTarget,
+      totalSaved: totalSaved,
+      overallProgress: overallProgress
     }
   });
 });
