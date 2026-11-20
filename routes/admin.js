@@ -4,9 +4,9 @@ const auth = require("../middleware/auth");
 const admin = require("../middleware/admin");
 const router = express.Router();
 
-router.use(auth, admin); // dono middleware har route pe
+router.use(auth, admin);
 
-// GET ALL USERS
+
 router.get("/users", async (req, res) => {
   const users = await prisma.user.findMany({
     select: { id: true, name: true, email: true, role: true, createdAt: true, _count: { select: { transactions: true } } },
@@ -15,7 +15,7 @@ router.get("/users", async (req, res) => {
   res.json(users);
 });
 
-// DELETE USER
+
 router.delete("/users/:id", async (req, res) => {
   const id = Number(req.params.id);
   if (id === req.userId) return res.status(400).json({ error: "Cannot delete yourself" });
