@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FinTrack</title>
+  <link rel="stylesheet" href="css/style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar">
+    <h2>💰 FinTrack</h2>
+    <nav class="nav">
+      <button data-page="dashboard" class="active">📊 Dashboard</button>
+      <button data-page="transactions">💸 Transactions</button>
+      <button data-page="budgets">🎯 Budgets & Goals</button>
+      <button data-page="reports">📄 Reports</button>
+      <button data-page="profile">👤 Profile</button>
+      <button data-page="admin" id="navAdmin">🛡️ Admin</button>
+    </nav>
+    <div class="side-bottom">
+      <p id="userName"></p>
+      <button id="logoutBtn" class="btn small">Logout</button>
+    </div>
+  </aside>
+
+  <main class="main">
+
+    <!-- DASHBOARD (Member 4) -->
+    <section class="page" id="page-dashboard">
+      <h1>Dashboard <small class="muted">(this month)</small></h1>
+      <div id="dAlert" class="alert"></div>
+      <div class="summary">
+        <div class="card green"><p>Income</p><h3 id="dIncome">0</h3></div>
+        <div class="card red"><p>Expenses</p><h3 id="dExpense">0</h3></div>
+        <div class="card blue"><p>Balance</p><h3 id="dBalance">0</h3></div>
+      </div>
+      <div class="two-col">
+        <div class="card"><h3>Spending by Category</h3><div class="chart-box"><canvas id="dPie"></canvas></div></div>
+        <div class="card"><h3>Last 6 Months</h3><div class="chart-box"><canvas id="dTrend"></canvas></div></div>
+      </div>
+    </section>
+
+    <!-- TRANSACTIONS (Member 2) -->
+    <section class="page" id="page-transactions" style="display:none">
+      <h1>Transactions</h1>
+      <div class="card">
+        <h3 id="formTitle">Add Transaction</h3>
+        <div class="form-row">
+          <input id="tTitle" placeholder="Title (e.g. Lunch)" />
+          <input id="tAmount" type="number" placeholder="Amount" />
+          <select id="tType"><option value="expense">Expense</option><option value="income">Income</option></select>
+          <select id="tCategory" class="cat"></select>
+          <input id="tDate" type="date" />
+          <button id="tSave" class="btn">Add</button>
+        </div>
+        <p id="tMsg" class="error"></p>
+      </div>
+      <div class="card">
+        <div class="filter-row">
+          <input id="fQ" placeholder="🔍 Search title" />
+          <select id="fType"><option value="">All types</option><option value="income">Income</option><option value="expense">Expense</option></select>
+          <select id="fCategory" class="cat-filter"></select>
+          <input id="fFrom" type="date" title="From" />
+          <input id="fTo" type="date" title="To" />
+          <select id="fSort">
+            <option value="date_desc">Newest</option><option value="date_asc">Oldest</option>
+            <option value="amount_desc">Amount high-low</option><option value="amount_asc">Amount low-high</option>
+          </select>
+          <button id="fApply" class="btn">Filter</button>
+          <button id="fExport" class="btn green-btn">⬇ CSV</button>
+        </div>
+        <table>
+          <thead><tr><th>Date</th><th>Title</th><th>Category</th><th>Amount</th><th></th></tr></thead>
+          <tbody id="tList"></tbody>
+        </table>
+        <div class="pager">
+          <button id="prevBtn" class="btn small">‹ Prev</button>
+          <span id="pageInfo"></span>
+          <button id="nextBtn" class="btn small">Next ›</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- BUDGETS & GOALS (Member 3) -->
+    <section class="page" id="page-budgets" style="display:none">
+      <h1>Budgets & Goals</h1>
+      <div class="card">
+        <h3>Monthly Budget</h3>
+        <div class="form-row budget-row">
+          <input id="bMonth" type="month" />
+          <select id="bCategory" class="cat"></select>
+          <input id="bLimit" type="number" placeholder="Limit amount" />
+          <button id="bSave" class="btn">Set Budget</button>
+        </div>
+        <p id="bMsg" class="error"></p>
+        <div id="bList"></div>
+      </div>
+      <div class="card">
+        <h3>Savings Goals</h3>
+        <div class="form-row budget-row">
+          <input id="gTitle" placeholder="Goal (e.g. New laptop)" />
+          <input id="gTarget" type="number" placeholder="Target amount" />
+          <button id="gSave" class="btn">Add Goal</button>
+        </div>
+        <p id="gMsg" class="error"></p>
+        <div id="gList"></div>
+      </div>
+    </section>
+
+    <!-- REPORTS (Member 4) -->
+    <section class="page" id="page-reports" style="display:none">
+      <h1>Monthly Report</h1>
+      <div class="card no-print">
+        <input id="rMonth" type="month" style="width:200px" />
+        <button id="rLoad" class="btn">Show</button>
+        <button id="rPrint" class="btn green-btn">🖨️ Download PDF</button>
+      </div>
+      <div class="summary">
+        <div class="card green"><p>Income</p><h3 id="rIncome">0</h3></div>
+        <div class="card red"><p>Expenses</p><h3 id="rExpense">0</h3></div>
+        <div class="card blue"><p>Balance</p><h3 id="rBalance">0</h3></div>
+      </div>
+      <div class="two-col">
+        <div class="card"><h3>Category Split</h3><div class="chart-box"><canvas id="rPie"></canvas></div></div>
+        <div class="card"><h3>Income vs Expense</h3><div class="chart-box"><canvas id="rTrend"></canvas></div></div>
+      </div>
+      <div class="card">
+        <h3>Expense Details</h3>
+        <table><thead><tr><th>Category</th><th>Amount</th><th>Share</th></tr></thead><tbody id="rTable"></tbody></table>
+      </div>
+    </section>
+
+    <!-- PROFILE (Member 1) -->
+    <section class="page" id="page-profile" style="display:none">
+      <h1>Profile</h1>
+      <div class="card narrow">
+        <h3>My Details</h3>
+        <p class="muted" id="pEmail"></p>
+        <input id="pName" placeholder="Name" />
+        <button id="pSave" class="btn">Update Name</button>
+        <p id="pMsg" class="error"></p>
+      </div>
+      <div class="card narrow">
+        <h3>Change Password</h3>
+        <input id="oldPass" type="password" placeholder="Old password" />
+        <input id="newPass" type="password" placeholder="New password" />
+        <button id="passSave" class="btn">Change Password</button>
+        <p id="passMsg" class="error"></p>
+      </div>
+    </section>
+
+    <!-- ADMIN (Member 1) -->
+    <section class="page" id="page-admin" style="display:none">
+      <h1>Admin - All Users</h1>
+      <div class="card">
+        <table>
+          <thead><tr><th>ID</th><th>Name</th><th>Email</th><th>Role</th><th>Transactions</th><th></th></tr></thead>
+          <tbody id="aList"></tbody>
+        </table>
+      </div>
+    </section>
+
+  </main>
+</div>
+<div id="toast"></div>
+
+<script src="js/common.js"></script>
+<script src="js/reports.js"></script>
+<script src="js/transactions.js"></script>
+<script src="js/budgets.js"></script>
+<script src="js/profile.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
