@@ -3,123 +3,69 @@ import {
   Menu,
   Search,
   Bell,
-  User,
   Settings,
   LogOut,
   X,
+  ChevronDown,
+  Wallet,
+  Sparkles,
 } from "lucide-react";
-
 import { useNavigate } from "react-router-dom";
 
 function Navbar({ onMenuClick }) {
   const navigate = useNavigate();
 
   const [user, setUser] = useState(null);
-
-  const [searchOpen, setSearchOpen] =
-    useState(false);
-
-  const [notificationOpen, setNotificationOpen] =
-    useState(false);
-
-  const [profileOpen, setProfileOpen] =
-    useState(false);
-
-  const [searchValue, setSearchValue] =
-    useState("");
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [notificationOpen, setNotificationOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
+  const [searchValue, setSearchValue] = useState("");
 
   const profileRef = useRef(null);
   const notificationRef = useRef(null);
 
-
-  // ==========================================
-  // GET USER FROM LOCAL STORAGE
-  // ==========================================
-
   useEffect(() => {
-    const storedUser =
-      localStorage.getItem("user");
+    const storedUser = localStorage.getItem("user");
 
     if (storedUser) {
       try {
         setUser(JSON.parse(storedUser));
       } catch (error) {
-        console.error(
-          "Unable to parse user:",
-          error
-        );
+        console.error("Unable to parse user:", error);
       }
     }
   }, []);
 
-
-  // ==========================================
-  // CLOSE DROPDOWNS WHEN CLICKING OUTSIDE
-  // ==========================================
-
   useEffect(() => {
     const handleClickOutside = (event) => {
-
-      if (
-        profileRef.current &&
-        !profileRef.current.contains(event.target)
-      ) {
+      if (profileRef.current && !profileRef.current.contains(event.target)) {
         setProfileOpen(false);
       }
 
       if (
         notificationRef.current &&
-        !notificationRef.current.contains(
-          event.target
-        )
+        !notificationRef.current.contains(event.target)
       ) {
         setNotificationOpen(false);
       }
     };
 
-    document.addEventListener(
-      "mousedown",
-      handleClickOutside
-    );
-
-    return () => {
-      document.removeEventListener(
-        "mousedown",
-        handleClickOutside
-      );
-    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
-
-
-  // ==========================================
-  // LOGOUT
-  // ==========================================
 
   const handleLogout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
-
     setProfileOpen(false);
-
     navigate("/login");
   };
-
-
-  // ==========================================
-  // SEARCH
-  // ==========================================
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();
 
-    const value =
-      searchValue.trim().toLowerCase();
-
-    if (!value) {
-      return;
-    }
-
-    // Basic navigation search
+    const value = searchValue.trim().toLowerCase();
+    if (!value) return;
 
     if (value.includes("transaction")) {
       navigate("/transactions");
@@ -127,579 +73,207 @@ function Navbar({ onMenuClick }) {
       navigate("/budgets");
     } else if (value.includes("goal")) {
       navigate("/goals");
-    } else if (
-      value.includes("analytic")
-    ) {
+    } else if (value.includes("analytic")) {
       navigate("/analytics");
-    } else if (
-      value.includes("recurring") ||
-      value.includes("payment")
-    ) {
+    } else if (value.includes("recurring") || value.includes("payment")) {
       navigate("/recurring-payments");
-    } else if (
-      value.includes("setting") ||
-      value.includes("profile")
-    ) {
+    } else if (value.includes("setting") || value.includes("profile")) {
       navigate("/settings");
-    } else if (
-      value.includes("dashboard")
-    ) {
+    } else if (value.includes("dashboard")) {
       navigate("/dashboard");
     }
 
     setSearchValue("");
+    setSearchOpen(false);
   };
 
+  const userInitial = user?.name ? user.name.charAt(0).toUpperCase() : "U";
 
-  // ==========================================
-  // USER INITIAL
-  // ==========================================
-
-  const userInitial =
-    user?.name
-      ? user.name.charAt(0).toUpperCase()
-      : "U";
-
+  const searchInputClass =
+    "h-11 w-full rounded-xl border border-[#e9e5da] bg-[#f8f7f1] pl-11 pr-4 text-sm text-[#3b4435] outline-none transition placeholder:text-[#aaa99f] focus:border-[#a6b293] focus:bg-white focus:ring-4 focus:ring-[#8b9873]/10";
 
   return (
-    <header
-      className="
-        fixed
-        left-0
-        right-0
-        top-0
-        z-40
-        h-16
-        border-b
-        border-gray-200
-        bg-white
-
-        lg:left-64
-      "
-    >
-
-      <div
-        className="
-          flex
-          h-full
-          items-center
-          justify-between
-          gap-3
-          px-4
-          sm:px-6
-        "
-      >
-
-        {/* ====================================
-            LEFT SIDE
-        ===================================== */}
-
-        <div
-          className="
-            flex
-            min-w-0
-            flex-1
-            items-center
-            gap-3
-          "
-        >
-
-          {/* Mobile Menu */}
-
+    <header className="fixed left-0 right-0 top-0 z-40 border-b border-[#ebe8de] bg-[#fffefa]/95 backdrop-blur-xl lg:left-[264px]">
+      <div className="flex min-h-[76px] items-center justify-between gap-3 px-4 sm:px-6 lg:px-8">
+        <div className="flex min-w-0 flex-1 items-center gap-3">
           <button
+            type="button"
             onClick={onMenuClick}
-            className="
-              flex
-              h-9
-              w-9
-              shrink-0
-              items-center
-              justify-center
-              rounded-lg
-              text-gray-600
-              transition
-              hover:bg-gray-100
-              hover:text-gray-900
-              lg:hidden
-            "
             aria-label="Open menu"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-[#68745e] transition hover:bg-[#f0efe7] hover:text-[#48583c] lg:hidden"
           >
             <Menu size={21} />
           </button>
 
-
-          {/* ==================================
-              DESKTOP SEARCH
-          =================================== */}
-
-          <form
-            onSubmit={handleSearchSubmit}
-            className="
-              hidden
-              w-full
-              max-w-md
-              md:block
-            "
-          >
-
-            <div className="relative">
-
-              <Search
-                size={18}
-                className="
-                  absolute
-                  left-3
-                  top-1/2
-                  -translate-y-1/2
-                  text-gray-400
-                "
-              />
-
-              <input
-                type="text"
-                value={searchValue}
-                onChange={(e) =>
-                  setSearchValue(
-                    e.target.value
-                  )
-                }
-                placeholder="Search..."
-                className="
-                  h-10
-                  w-full
-                  rounded-lg
-                  border
-                  border-gray-200
-                  bg-gray-50
-                  pl-10
-                  pr-4
-                  text-sm
-                  text-gray-900
-                  outline-none
-                  transition
-                  placeholder:text-gray-400
-                  focus:border-green-500
-                  focus:bg-white
-                  focus:ring-1
-                  focus:ring-green-500
-                "
-              />
-
-            </div>
-
-          </form>
-
-
-          {/* ==================================
-              MOBILE SEARCH BUTTON
-          =================================== */}
+          <div className="hidden min-w-0 flex-1 md:block">
+            <form onSubmit={handleSearchSubmit} className="w-full max-w-[440px]">
+              <div className="relative">
+                <Search
+                  size={17}
+                  className="absolute left-4 top-1/2 -translate-y-1/2 text-[#a1a294]"
+                />
+                <input
+                  type="text"
+                  value={searchValue}
+                  onChange={(e) => setSearchValue(e.target.value)}
+                  placeholder="Search transactions, budgets, goals..."
+                  aria-label="Search FinTrack"
+                  className={searchInputClass}
+                />
+                <span className="pointer-events-none absolute right-3 top-1/2 hidden -translate-y-1/2 rounded-md border border-[#e7e4da] bg-white px-1.5 py-0.5 text-[10px] text-[#aaa99f] lg:block">
+                  Enter
+                </span>
+              </div>
+            </form>
+          </div>
 
           <button
-            onClick={() =>
-              setSearchOpen(!searchOpen)
-            }
-            className="
-              flex
-              h-9
-              w-9
-              shrink-0
-              items-center
-              justify-center
-              rounded-lg
-              text-gray-600
-              transition
-              hover:bg-gray-100
-              md:hidden
-            "
-            aria-label="Search"
+            type="button"
+            onClick={() => setSearchOpen((open) => !open)}
+            aria-label="Toggle search"
+            aria-expanded={searchOpen}
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-[#68745e] transition hover:bg-[#f0efe7] md:hidden"
           >
-
-            {searchOpen ? (
-              <X size={20} />
-            ) : (
-              <Search size={20} />
-            )}
-
+            {searchOpen ? <X size={20} /> : <Search size={20} />}
           </button>
-
         </div>
 
-
-        {/* ====================================
-            RIGHT SIDE
-        ===================================== */}
-
-        <div
-          className="
-            flex
-            shrink-0
-            items-center
-            gap-2
-            sm:gap-3
-          "
-        >
-
-          {/* ==================================
-              NOTIFICATIONS
-          =================================== */}
-
-          <div
-            ref={notificationRef}
-            className="relative"
-          >
-
+        <div className="flex shrink-0 items-center gap-1.5 sm:gap-3">
+          <div ref={notificationRef} className="relative">
             <button
-              onClick={() =>
-                setNotificationOpen(
-                  !notificationOpen
-                )
-              }
-              className="
-                relative
-                flex
-                h-10
-                w-10
-                items-center
-                justify-center
-                rounded-lg
-                text-gray-600
-                transition
-                hover:bg-gray-100
-                hover:text-gray-900
-              "
+              type="button"
+              onClick={() => {
+                setNotificationOpen((open) => !open);
+                setProfileOpen(false);
+              }}
               aria-label="Notifications"
+              aria-expanded={notificationOpen}
+              className="relative flex h-10 w-10 items-center justify-center rounded-xl text-[#7c806f] transition hover:bg-[#f2f0e8] hover:text-[#687957]"
             >
-
-              <Bell size={20} />
-
-              {/* Notification dot */}
-
-              <span
-                className="
-                  absolute
-                  right-2
-                  top-2
-                  h-2
-                  w-2
-                  rounded-full
-                  bg-red-500
-                "
-              />
-
+              <Bell size={19} strokeWidth={1.8} />
+              <span className="absolute right-[9px] top-[8px] h-2 w-2 rounded-full border-2 border-[#fffefa] bg-[#c77b65]" />
             </button>
-
-
-            {/* Notification Dropdown */}
 
             {notificationOpen && (
-              <div
-                className="
-                  absolute
-                  right-0
-                  top-12
-                  z-50
-                  w-72
-                  overflow-hidden
-                  rounded-xl
-                  border
-                  border-gray-200
-                  bg-white
-                  shadow-lg
-                "
-              >
-
-                <div
-                  className="
-                    border-b
-                    border-gray-200
-                    px-4
-                    py-3
-                  "
-                >
-
-                  <h3 className="text-sm font-semibold text-gray-900">
+              <div className="absolute right-0 top-12 z-50 w-[290px] overflow-hidden rounded-2xl border border-[#e9e5da] bg-[#fffefa] shadow-[0_16px_45px_rgba(54,58,43,0.12)]">
+                <div className="border-b border-[#efede5] px-5 py-4">
+                  <h3 className="text-sm font-semibold text-[#35412f]">
                     Notifications
                   </h3>
-
-                </div>
-
-
-                <div className="px-4 py-6 text-center">
-
-                  <Bell
-                    size={24}
-                    className="
-                      mx-auto
-                      mb-2
-                      text-gray-300
-                    "
-                  />
-
-                  <p className="text-sm text-gray-500">
-                    No new notifications
+                  <p className="mt-1 text-xs text-[#96978b]">
+                    A quick look at what's new
                   </p>
-
                 </div>
-
+                <div className="px-5 py-8 text-center">
+                  <div className="mx-auto mb-3 flex h-11 w-11 items-center justify-center rounded-full bg-[#eef0e5] text-[#71815f]">
+                    <Sparkles size={18} />
+                  </div>
+                  <p className="text-sm font-medium text-[#536047]">
+                    You're all caught up!
+                  </p>
+                  <p className="mt-1 text-xs text-[#999b8e]">
+                    No new notifications right now.
+                  </p>
+                </div>
               </div>
             )}
-
           </div>
 
-
-          {/* ==================================
-              PROFILE
-          =================================== */}
-
-          <div
-            ref={profileRef}
-            className="relative"
-          >
-
+          <div ref={profileRef} className="relative">
             <button
-              onClick={() =>
-                setProfileOpen(!profileOpen)
-              }
-              className="
-                flex
-                items-center
-                gap-2
-                rounded-lg
-                p-1.5
-                transition
-                hover:bg-gray-50
-                sm:gap-3
-                sm:pr-2
-              "
+              type="button"
+              onClick={() => {
+                setProfileOpen((open) => !open);
+                setNotificationOpen(false);
+              }}
+              aria-label="Open profile menu"
+              aria-expanded={profileOpen}
+              className="flex items-center gap-2 rounded-xl p-1.5 transition hover:bg-[#f3f1e9] sm:gap-3 sm:pr-2"
             >
-
-              {/* Avatar */}
-
-              <div
-                className="
-                  flex
-                  h-9
-                  w-9
-                  shrink-0
-                  items-center
-                  justify-center
-                  rounded-full
-                  bg-green-500
-                  text-sm
-                  font-semibold
-                  text-white
-                "
-              >
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#758464] text-sm font-semibold text-white ring-2 ring-[#e8ebdf]">
                 {userInitial}
-              </div>
-
-
-              {/* User info */}
-
-              <div
-                className="
-                  hidden
-                  text-left
-                  sm:block
-                "
-              >
-
-                <p
-                  className="
-                    max-w-28
-                    truncate
-                    text-sm
-                    font-semibold
-                    text-gray-900
-                  "
-                >
+              </span>
+              <span className="hidden text-left sm:block">
+                <span className="block max-w-28 truncate text-[13px] font-semibold text-[#3c4635]">
                   {user?.name || "User"}
-                </p>
-
-                <p className="text-xs text-gray-500">
-                  Personal Account
-                </p>
-
-              </div>
-
+                </span>
+                <span className="mt-0.5 block text-[10px] text-[#999b8e]">
+                  Personal account
+                </span>
+              </span>
+              <ChevronDown
+                size={15}
+                className="hidden text-[#a0a092] sm:block"
+              />
             </button>
 
-
-            {/* =================================
-                PROFILE DROPDOWN
-            ================================== */}
-
             {profileOpen && (
-              <div
-                className="
-                  absolute
-                  right-0
-                  top-12
-                  z-50
-                  w-56
-                  overflow-hidden
-                  rounded-xl
-                  border
-                  border-gray-200
-                  bg-white
-                  shadow-lg
-                "
-              >
-
-                {/* User header */}
-
-                <div
-                  className="
-                    border-b
-                    border-gray-200
-                    px-4
-                    py-3
-                  "
-                >
-
-                  <p className="truncate text-sm font-semibold text-gray-900">
-                    {user?.name || "User"}
-                  </p>
-
-                  <p className="truncate text-xs text-gray-500">
-                    {user?.email || ""}
-                  </p>
-
+              <div className="absolute right-0 top-14 z-50 w-60 overflow-hidden rounded-2xl border border-[#e9e5da] bg-[#fffefa] shadow-[0_16px_45px_rgba(54,58,43,0.12)]">
+                <div className="border-b border-[#efede5] bg-[#f7f6ef] px-4 py-4">
+                  <div className="flex items-center gap-3">
+                    <span className="flex h-10 w-10 items-center justify-center rounded-full bg-[#758464] text-sm font-semibold text-white">
+                      {userInitial}
+                    </span>
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-semibold text-[#35412f]">
+                        {user?.name || "User"}
+                      </p>
+                      <p className="truncate text-xs text-[#999b8e]">
+                        {user?.email || ""}
+                      </p>
+                    </div>
+                  </div>
                 </div>
 
-
-                {/* Settings */}
-
-                <button
-                  onClick={() => {
-                    setProfileOpen(false);
-                    navigate("/settings");
-                  }}
-                  className="
-                    flex
-                    w-full
-                    items-center
-                    gap-3
-                    px-4
-                    py-3
-                    text-sm
-                    text-gray-700
-                    transition
-                    hover:bg-gray-50
-                  "
-                >
-
-                  <Settings size={17} />
-
-                  <span>
-                    Settings
-                  </span>
-
-                </button>
-
-
-                {/* Logout */}
-
-                <button
-                  onClick={handleLogout}
-                  className="
-                    flex
-                    w-full
-                    items-center
-                    gap-3
-                    border-t
-                    border-gray-100
-                    px-4
-                    py-3
-                    text-sm
-                    text-red-600
-                    transition
-                    hover:bg-red-50
-                  "
-                >
-
-                  <LogOut size={17} />
-
-                  <span>
-                    Logout
-                  </span>
-
-                </button>
-
+                <div className="p-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setProfileOpen(false);
+                      navigate("/settings");
+                    }}
+                    className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-sm text-[#65705b] transition hover:bg-[#f2f0e8] hover:text-[#536747]"
+                  >
+                    <Settings size={17} />
+                    <span>Settings</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleLogout}
+                    className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-sm text-[#a16f63] transition hover:bg-[#fbf0eb] hover:text-[#b65e4e]"
+                  >
+                    <LogOut size={17} />
+                    <span>Log out</span>
+                  </button>
+                </div>
               </div>
             )}
-
           </div>
-
         </div>
-
       </div>
-
-
-      {/* ======================================
-          MOBILE SEARCH BAR
-      ======================================= */}
 
       {searchOpen && (
         <form
           onSubmit={handleSearchSubmit}
-          className="
-            border-b
-            border-gray-200
-            bg-white
-            px-4
-            pb-3
-            pt-1
-            md:hidden
-          "
+          className="border-t border-[#efede5] bg-[#fffefa] px-4 pb-4 pt-3 md:hidden"
         >
-
           <div className="relative">
-
             <Search
-              size={18}
-              className="
-                absolute
-                left-3
-                top-1/2
-                -translate-y-1/2
-                text-gray-400
-              "
+              size={17}
+              className="absolute left-4 top-1/2 -translate-y-1/2 text-[#a1a294]"
             />
-
             <input
               type="text"
               autoFocus
               value={searchValue}
-              onChange={(e) =>
-                setSearchValue(
-                  e.target.value
-                )
-              }
-              placeholder="Search..."
-              className="
-                h-10
-                w-full
-                rounded-lg
-                border
-                border-gray-200
-                bg-gray-50
-                pl-10
-                pr-4
-                text-sm
-                outline-none
-                focus:border-green-500
-                focus:bg-white
-                focus:ring-1
-                focus:ring-green-500
-              "
+              onChange={(e) => setSearchValue(e.target.value)}
+              placeholder="Search transactions, budgets, goals..."
+              aria-label="Search FinTrack"
+              className={searchInputClass}
             />
-
           </div>
-
         </form>
       )}
-
     </header>
   );
 }

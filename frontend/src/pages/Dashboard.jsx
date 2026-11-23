@@ -1,24 +1,37 @@
+
 import { useEffect, useState } from "react";
+
 import {
   Wallet,
   TrendingUp,
   TrendingDown,
   PiggyBank,
   Target,
+  ArrowRight,
+  Plus,
+  Receipt,
+  Sparkles,
+  CalendarDays,
+  CircleDollarSign,
 } from "lucide-react";
+
+import { useNavigate } from "react-router-dom";
 
 import Sidebar from "../components/Sidebar";
 import Navbar from "../components/Navbar";
 import api from "../services/api";
 
 function Dashboard() {
+  const navigate = useNavigate();
+
   const [sidebarOpen, setSidebarOpen] = useState(false);
-
   const [dashboard, setDashboard] = useState(null);
-
   const [loading, setLoading] = useState(true);
-
   const [error, setError] = useState("");
+
+  // ==========================================
+  // FETCH DASHBOARD DATA
+  // ==========================================
 
   useEffect(() => {
     fetchDashboard();
@@ -30,7 +43,6 @@ function Dashboard() {
       setError("");
 
       const response = await api.get("/dashboard");
-
       setDashboard(response.data);
     } catch (err) {
       console.error("Dashboard error:", err);
@@ -44,6 +56,10 @@ function Dashboard() {
     }
   };
 
+  // ==========================================
+  // FORMAT HELPERS
+  // ==========================================
+
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat("en-IN", {
       style: "currency",
@@ -55,147 +71,26 @@ function Dashboard() {
   const formatDate = (date) => {
     if (!date) return "-";
 
-    return new Date(date).toLocaleDateString(
-      "en-IN",
-      {
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-      }
-    );
+    return new Date(date).toLocaleDateString("en-IN", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    });
   };
 
-  /*
-    LOADING
-  */
+  const currentMonth = new Date().toLocaleDateString(
+    "en-IN",
+    {
+      month: "long",
+      year: "numeric",
+    }
+  );
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50">
+  // ==========================================
+  // DASHBOARD DATA
+  // ==========================================
 
-        <Sidebar
-          isOpen={sidebarOpen}
-          onClose={() =>
-            setSidebarOpen(false)
-          }
-        />
-
-        <Navbar
-          onMenuClick={() =>
-            setSidebarOpen(true)
-          }
-        />
-
-        <main
-          className="
-            p-4
-            pt-20
-            sm:p-6
-            sm:pt-20
-            lg:ml-64
-            lg:p-8
-            lg:pt-24
-          "
-        >
-
-          <div
-            className="
-              flex
-              min-h-[55vh]
-              items-center
-              justify-center
-            "
-          >
-
-            <div className="text-center">
-
-              <div
-                className="
-                  mx-auto
-                  mb-3
-                  h-8
-                  w-8
-                  animate-spin
-                  rounded-full
-                  border-4
-                  border-gray-200
-                  border-t-green-600
-                "
-              />
-
-              <p className="text-sm text-gray-500">
-                Loading dashboard...
-              </p>
-
-            </div>
-
-          </div>
-
-        </main>
-
-      </div>
-    );
-  }
-
-  /*
-    ERROR
-  */
-
-  if (error) {
-    return (
-      <div className="min-h-screen bg-gray-50">
-
-        <Sidebar
-          isOpen={sidebarOpen}
-          onClose={() =>
-            setSidebarOpen(false)
-          }
-        />
-
-        <Navbar
-          onMenuClick={() =>
-            setSidebarOpen(true)
-          }
-        />
-
-        <main
-          className="
-            p-4
-            pt-20
-            sm:p-6
-            sm:pt-20
-            lg:ml-64
-            lg:p-8
-            lg:pt-24
-          "
-        >
-
-          <div
-            className="
-              rounded-xl
-              border
-              border-red-200
-              bg-red-50
-              p-5
-              text-sm
-              text-red-700
-            "
-          >
-            {error}
-          </div>
-
-        </main>
-
-      </div>
-    );
-  }
-
-  /*
-    DATA
-  */
-
-  const summary =
-    dashboard?.summary || {};
+  const summary = dashboard?.summary || {};
 
   const recentTransactions =
     dashboard?.recentTransactions || [];
@@ -212,1888 +107,773 @@ function Dashboard() {
   const insights =
     dashboard?.insights || [];
 
-  const totalCategorySpending =
-    spendingByCategory.reduce(
-      (sum, category) =>
-        sum +
-        Number(category.total || 0),
-      0
+  const totalCategorySpending = spendingByCategory.reduce(
+    (sum, category) =>
+      sum + Number(category.total || 0),
+    0
+  );
+
+  // ==========================================
+  // LAYOUT
+  // ==========================================
+
+  const mainWrapper = "min-h-screen bg-[#E9EDE5]";
+
+  const mainContent =
+    "px-4 pb-10 pt-[96px] sm:px-6 lg:ml-[260px] lg:px-8 lg:pt-[104px]";
+
+  // ==========================================
+  // LOADING STATE
+  // ==========================================
+
+  if (loading) {
+    return (
+      <div className={mainWrapper}>
+        <Sidebar
+          isOpen={sidebarOpen}
+          onClose={() => setSidebarOpen(false)}
+        />
+
+        <Navbar
+          onMenuClick={() => setSidebarOpen(true)}
+        />
+
+        <main className={mainContent}>
+          <div className="flex min-h-[65vh] flex-col items-center justify-center">
+            <div className="mb-4 h-9 w-9 animate-spin rounded-full border-[3px] border-[#DCE7DA] border-t-[#526B50]" />
+
+            <p className="text-sm text-[#899184]">
+              Preparing your financial overview...
+            </p>
+          </div>
+        </main>
+      </div>
     );
+  }
+
+  // ==========================================
+  // ERROR STATE
+  // ==========================================
+
+  if (error) {
+    return (
+      <div className={mainWrapper}>
+        <Sidebar
+          isOpen={sidebarOpen}
+          onClose={() => setSidebarOpen(false)}
+        />
+
+        <Navbar
+          onMenuClick={() => setSidebarOpen(true)}
+        />
+
+        <main className={mainContent}>
+          <div className="rounded-2xl border border-[#F0D8CC] bg-white p-8 text-center">
+            <p className="font-semibold text-[#A66C5B]">
+              Couldn't load your dashboard
+            </p>
+
+            <p className="mt-2 text-sm text-[#899184]">
+              {error}
+            </p>
+
+            <button
+              onClick={fetchDashboard}
+              className="mt-5 rounded-xl bg-[#526B50] px-5 py-2.5 text-sm font-medium text-white transition hover:bg-[#405B43]"
+            >
+              Try again
+            </button>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  // ==========================================
+  // MAIN DASHBOARD
+  // ==========================================
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className={mainWrapper}>
 
       {/* SIDEBAR */}
-
       <Sidebar
         isOpen={sidebarOpen}
-        onClose={() =>
-          setSidebarOpen(false)
-        }
+        onClose={() => setSidebarOpen(false)}
       />
 
       {/* NAVBAR */}
-
       <Navbar
-        onMenuClick={() =>
-          setSidebarOpen(true)
-        }
+        onMenuClick={() => setSidebarOpen(true)}
       />
 
-      {/* MAIN */}
-
-      <main
-        className="
-          p-4
-          pt-20
-          sm:p-6
-          sm:pt-20
-          lg:ml-64
-          lg:p-8
-          lg:pt-24
-        "
-      >
-
-        {/* PAGE HEADER */}
-
-        <div className="mb-6">
-
-          <h1
-            className="
-              text-2xl
-              font-bold
-              tracking-tight
-              text-gray-900
-              sm:text-3xl
-            "
-          >
-            Dashboard
-          </h1>
-
-          <p
-            className="
-              mt-1
-              text-sm
-              text-gray-500
-            "
-          >
-            Here's a quick look at your finances.
-          </p>
-
-        </div>
-
-        {/* =====================================================
-            SUMMARY CARDS
-        ====================================================== */}
-
-        <div
-          className="
-            grid
-            grid-cols-1
-            gap-4
-            sm:grid-cols-2
-            xl:grid-cols-4
-          "
-        >
-
-          {/* TOTAL INCOME */}
-
-          <div
-            className="
-              rounded-xl
-              border
-              border-gray-200
-              bg-white
-              p-5
-            "
-          >
-
-            <div
-              className="
-                flex
-                items-start
-                justify-between
-                gap-3
-              "
-            >
-
-              <div>
-
-                <p
-                  className="
-                    text-sm
-                    text-gray-500
-                  "
-                >
-                  Total Income
-                </p>
-
-                <p
-                  className="
-                    mt-2
-                    text-2xl
-                    font-bold
-                    text-gray-900
-                  "
-                >
-                  {formatCurrency(
-                    summary.totalIncome
-                  )}
-                </p>
-
-              </div>
-
-              <div
-                className="
-                  rounded-lg
-                  bg-green-50
-                  p-2
-                "
-              >
-
-                <TrendingUp
-                  size={20}
-                  className="text-green-600"
-                />
-
-              </div>
-
-            </div>
-
-          </div>
-
-          {/* TOTAL EXPENSES */}
-
-          <div
-            className="
-              rounded-xl
-              border
-              border-gray-200
-              bg-white
-              p-5
-            "
-          >
-
-            <div
-              className="
-                flex
-                items-start
-                justify-between
-                gap-3
-              "
-            >
-
-              <div>
-
-                <p
-                  className="
-                    text-sm
-                    text-gray-500
-                  "
-                >
-                  Total Expenses
-                </p>
-
-                <p
-                  className="
-                    mt-2
-                    text-2xl
-                    font-bold
-                    text-gray-900
-                  "
-                >
-                  {formatCurrency(
-                    summary.totalExpenses
-                  )}
-                </p>
-
-              </div>
-
-              <div
-                className="
-                  rounded-lg
-                  bg-red-50
-                  p-2
-                "
-              >
-
-                <TrendingDown
-                  size={20}
-                  className="text-red-600"
-                />
-
-              </div>
-
-            </div>
-
-          </div>
-
-          {/* BALANCE */}
-
-          <div
-            className="
-              rounded-xl
-              border
-              border-gray-200
-              bg-white
-              p-5
-            "
-          >
-
-            <div
-              className="
-                flex
-                items-start
-                justify-between
-                gap-3
-              "
-            >
-
-              <div>
-
-                <p
-                  className="
-                    text-sm
-                    text-gray-500
-                  "
-                >
-                  Balance
-                </p>
-
-                <p
-                  className={`
-                    mt-2
-                    text-2xl
-                    font-bold
-                    ${
-                      Number(
-                        summary.balance
-                      ) >= 0
-                        ? "text-gray-900"
-                        : "text-red-600"
-                    }
-                  `}
-                >
-                  {formatCurrency(
-                    summary.balance
-                  )}
-                </p>
-
-              </div>
-
-              <div
-                className="
-                  rounded-lg
-                  bg-gray-100
-                  p-2
-                "
-              >
-
-                <Wallet
-                  size={20}
-                  className="text-gray-700"
-                />
-
-              </div>
-
-            </div>
-
-          </div>
-
-          {/* MONTHLY SAVINGS */}
-
-          <div
-            className="
-              rounded-xl
-              border
-              border-gray-200
-              bg-white
-              p-5
-            "
-          >
-
-            <div
-              className="
-                flex
-                items-start
-                justify-between
-                gap-3
-              "
-            >
-
-              <div>
-
-                <p
-                  className="
-                    text-sm
-                    text-gray-500
-                  "
-                >
-                  Monthly Savings
-                </p>
-
-                <p
-                  className={`
-                    mt-2
-                    text-2xl
-                    font-bold
-                    ${
-                      Number(
-                        summary.monthlySavings
-                      ) >= 0
-                        ? "text-green-600"
-                        : "text-red-600"
-                    }
-                  `}
-                >
-                  {formatCurrency(
-                    summary.monthlySavings
-                  )}
-                </p>
-
-              </div>
-
-              <div
-                className="
-                  rounded-lg
-                  bg-green-50
-                  p-2
-                "
-              >
-
-                <PiggyBank
-                  size={20}
-                  className="text-green-600"
-                />
-
-              </div>
-
-            </div>
-
-          </div>
-
-        </div>
-
-        {/* =====================================================
-            THIS MONTH
-        ====================================================== */}
-
-        <section className="mt-7">
-
-          <div className="mb-4">
-
-            <h2
-              className="
-                text-lg
-                font-semibold
-                text-gray-900
-              "
-            >
-              This month
-            </h2>
-
-            <p
-              className="
-                mt-0.5
-                text-sm
-                text-gray-500
-              "
-            >
-              Your current month's financial activity.
-            </p>
-
-          </div>
-
-          <div
-            className="
-              grid
-              grid-cols-1
-              gap-4
-              sm:grid-cols-3
-            "
-          >
-
-            {/* MONTHLY INCOME */}
-
-            <div
-              className="
-                rounded-xl
-                border
-                border-gray-200
-                bg-white
-                p-4
-                sm:p-5
-              "
-            >
-
-              <p
-                className="
-                  text-sm
-                  text-gray-500
-                "
-              >
-                Income
+      {/* MAIN CONTENT */}
+      <main className={mainContent}>
+        <div className="mx-auto max-w-[1500px] rounded-[24px] border border-white/70 bg-[#FFFDF9] p-5 shadow-[0_12px_45px_rgba(50,65,45,0.08)] sm:p-7 lg:p-9">
+
+          {/* ==========================================
+              HEADER
+          ========================================== */}
+
+          <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
+            <div>
+              <p className="mb-2 text-[11px] font-semibold uppercase tracking-[2px] text-[#87917F]">
+                YOUR FINANCIAL SPACE
               </p>
 
-              <p
-                className="
-                  mt-2
-                  text-xl
-                  font-semibold
-                  text-gray-900
-                "
-              >
-                {formatCurrency(
-                  summary.monthlyIncome
-                )}
-              </p>
+              <h1 className="text-3xl font-semibold tracking-tight text-[#343A32]">
+                Your money, in perspective.
+              </h1>
 
+              <p className="mt-2 text-sm text-[#8B8C81]">
+                A little clarity goes a long way.
+              </p>
             </div>
 
-            {/* MONTHLY EXPENSES */}
+            <div className="rounded-xl border border-[#EAE8DF] bg-white px-4 py-2.5 text-sm text-[#646D5E]">
+              <CalendarDays
+                size={15}
+                className="mr-2 inline-block"
+              />
 
-            <div
-              className="
-                rounded-xl
-                border
-                border-gray-200
-                bg-white
-                p-4
-                sm:p-5
-              "
-            >
-
-              <p
-                className="
-                  text-sm
-                  text-gray-500
-                "
-              >
-                Expenses
-              </p>
-
-              <p
-                className="
-                  mt-2
-                  text-xl
-                  font-semibold
-                  text-gray-900
-                "
-              >
-                {formatCurrency(
-                  summary.monthlyExpenses
-                )}
-              </p>
-
+              {currentMonth}
             </div>
-
-            {/* SAVINGS RATE */}
-
-            <div
-              className="
-                rounded-xl
-                border
-                border-gray-200
-                bg-white
-                p-4
-                sm:p-5
-              "
-            >
-
-              <p
-                className="
-                  text-sm
-                  text-gray-500
-                "
-              >
-                Savings Rate
-              </p>
-
-              <p
-                className="
-                  mt-2
-                  text-xl
-                  font-semibold
-                  text-gray-900
-                "
-              >
-                {Number(
-                  summary.savingsRate || 0
-                ).toFixed(1)}
-                %
-              </p>
-
-            </div>
-
           </div>
 
-        </section>
+          {/* ==========================================
+              FINANCIAL SUMMARY
+          ========================================== */}
 
-        {/* =====================================================
-            BUDGET + SPENDING
-        ====================================================== */}
-
-        <div
-          className="
-            mt-7
-            grid
-            grid-cols-1
-            gap-5
-            xl:grid-cols-2
-          "
-        >
-
-          {/* BUDGET OVERVIEW */}
-
-          <section
-            className="
-              overflow-hidden
-              rounded-xl
-              border
-              border-gray-200
-              bg-white
-            "
-          >
-
-            <div
-              className="
-                border-b
-                border-gray-200
-                p-5
-              "
-            >
-
-              <h2
-                className="
-                  font-semibold
-                  text-gray-900
-                "
-              >
-                Budget overview
+          <section className="mb-8">
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-sm font-semibold text-[#454B40]">
+                Financial overview
               </h2>
 
-              <p
-                className="
-                  mt-1
-                  text-sm
-                  text-gray-500
-                "
-              >
-                How you're doing against this month's budgets.
-              </p>
-
+              <span className="text-[11px] text-[#9B9B90]">
+                All-time summary
+              </span>
             </div>
 
-            <div className="p-5">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
 
-              {budgetOverview.length === 0 ? (
-
-                <div
-                  className="
-                    flex
-                    min-h-[150px]
-                    flex-col
-                    items-center
-                    justify-center
-                    text-center
-                  "
-                >
-
-                  <p
-                    className="
-                      text-sm
-                      text-gray-500
-                    "
-                  >
-                    No budgets set for this month.
+              {/* INCOME */}
+              <div className="rounded-[20px] border border-[#CFE4D5] bg-[#DDF0E4] p-5 transition duration-200 hover:-translate-y-1">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-medium text-[#637C68]">
+                    Total income
                   </p>
 
-                  <button
-                    onClick={() =>
-                      (window.location.href =
-                        "/budgets")
-                    }
-                    className="
-                      mt-3
-                      text-sm
-                      font-medium
-                      text-green-600
-                      hover:text-green-700
-                    "
-                  >
-                    Create a budget
-                  </button>
-
+                  <TrendingUp
+                    size={19}
+                    className="text-[#527B60]"
+                  />
                 </div>
 
-              ) : (
+                <p className="mt-5 text-[26px] font-semibold tracking-tight text-[#344B39]">
+                  {formatCurrency(summary.totalIncome)}
+                </p>
 
-                <div className="space-y-5">
+                <p className="mt-1 text-[11px] text-[#738B76]">
+                  Overall income
+                </p>
+              </div>
 
-                  {budgetOverview.map(
-                    (budget) => {
+              {/* EXPENSES */}
+              <div className="rounded-[20px] border border-[#F0D8CC] bg-[#F9E5DC] p-5 transition duration-200 hover:-translate-y-1">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-medium text-[#956F60]">
+                    Total expenses
+                  </p>
 
-                      const percentage =
-                        Math.min(
-                          Number(
-                            budget.percentage || 0
-                          ),
-                          100
-                        );
-
-                      const isOverBudget =
-                        Number(
-                          budget.spent
-                        ) >
-                        Number(
-                          budget.budgetAmount
-                        );
-
-                      return (
-                        <div
-                          key={budget.id}
-                        >
-
-                          <div
-                            className="
-                              mb-2
-                              flex
-                              items-center
-                              justify-between
-                              gap-3
-                            "
-                          >
-
-                            <div className="min-w-0">
-
-                              <p
-                                className="
-                                  truncate
-                                  text-sm
-                                  font-medium
-                                  text-gray-900
-                                "
-                              >
-                                {budget.category}
-                              </p>
-
-                              <p
-                                className="
-                                  text-xs
-                                  text-gray-500
-                                "
-                              >
-                                {formatCurrency(
-                                  budget.spent
-                                )}{" "}
-                                of{" "}
-                                {formatCurrency(
-                                  budget.budgetAmount
-                                )}
-                              </p>
-
-                            </div>
-
-                            <span
-                              className={`
-                                shrink-0
-                                text-xs
-                                font-medium
-                                ${
-                                  isOverBudget
-                                    ? "text-red-600"
-                                    : "text-gray-600"
-                                }
-                              `}
-                            >
-                              {Number(
-                                budget.percentage ||
-                                  0
-                              ).toFixed(0)}
-                              %
-                            </span>
-
-                          </div>
-
-                          <div
-                            className="
-                              h-2
-                              overflow-hidden
-                              rounded-full
-                              bg-gray-100
-                            "
-                          >
-
-                            <div
-                              className={`
-                                h-full
-                                rounded-full
-                                ${
-                                  isOverBudget
-                                    ? "bg-red-500"
-                                    : "bg-green-600"
-                                }
-                              `}
-                              style={{
-                                width: `${percentage}%`,
-                              }}
-                            />
-
-                          </div>
-
-                          <p
-                            className={`
-                              mt-1.5
-                              text-xs
-                              ${
-                                isOverBudget
-                                  ? "text-red-600"
-                                  : "text-gray-500"
-                              }
-                            `}
-                          >
-
-                            {isOverBudget
-                              ? `${formatCurrency(
-                                  Math.abs(
-                                    Number(
-                                      budget.remaining
-                                    )
-                                  )
-                                )} over budget`
-                              : `${formatCurrency(
-                                  budget.remaining
-                                )} remaining`}
-
-                          </p>
-
-                        </div>
-                      );
-                    }
-                  )}
-
+                  <TrendingDown
+                    size={19}
+                    className="text-[#BD806C]"
+                  />
                 </div>
 
-              )}
+                <p className="mt-5 text-[26px] font-semibold tracking-tight text-[#65483D]">
+                  {formatCurrency(summary.totalExpenses)}
+                </p>
 
+                <p className="mt-1 text-[11px] text-[#A17C6E]">
+                  Overall spending
+                </p>
+              </div>
+
+              {/* BALANCE */}
+              <div className="rounded-[20px] border border-[#E6E2D3] bg-[#F2F0E4] p-5 transition duration-200 hover:-translate-y-1">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-medium text-[#817D68]">
+                    Available balance
+                  </p>
+
+                  <Wallet
+                    size={19}
+                    className="text-[#817B5D]"
+                  />
+                </div>
+
+                <p className="mt-5 text-[26px] font-semibold tracking-tight text-[#494936]">
+                  {formatCurrency(summary.balance)}
+                </p>
+
+                <p className="mt-1 text-[11px] text-[#97927A]">
+                  Current balance
+                </p>
+              </div>
+
+              {/* SAVINGS */}
+              <div className="rounded-[20px] border border-[#DCD9F0] bg-[#E9E5F8] p-5 transition duration-200 hover:-translate-y-1">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-medium text-[#797198]">
+                    Monthly savings
+                  </p>
+
+                  <PiggyBank
+                    size={19}
+                    className="text-[#8174AD]"
+                  />
+                </div>
+
+                <p className="mt-5 text-[26px] font-semibold tracking-tight text-[#51466E]">
+                  {formatCurrency(summary.monthlySavings)}
+                </p>
+
+                <p className="mt-1 text-[11px] text-[#9288B2]">
+                  This month's savings
+                </p>
+              </div>
             </div>
-
           </section>
 
-          {/* SPENDING BY CATEGORY */}
+          {/* ==========================================
+              MONTHLY ACTIVITY
+          ========================================== */}
 
-          <section
-            className="
-              overflow-hidden
-              rounded-xl
-              border
-              border-gray-200
-              bg-white
-            "
-          >
+          <section className="mb-8 grid grid-cols-1 gap-5 xl:grid-cols-[1.5fr_1fr]">
 
-            <div
-              className="
-                border-b
-                border-gray-200
-                p-5
-              "
-            >
+            {/* INCOME AND EXPENSES */}
+            <div className="rounded-[20px] border border-[#EAE8DF] bg-white p-5 sm:p-6">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <h2 className="text-sm font-semibold text-[#444A40]">
+                    Income & expenses
+                  </h2>
 
-              <h2
-                className="
-                  font-semibold
-                  text-gray-900
-                "
-              >
+                  <p className="mt-1 text-xs text-[#96958A]">
+                    Your financial activity this month
+                  </p>
+                </div>
+
+                <span className="rounded-lg bg-[#F5F3EC] px-3 py-1.5 text-[11px] text-[#777C6E]">
+                  {currentMonth}
+                </span>
+              </div>
+
+              <div className="mt-7 grid grid-cols-2 gap-3">
+                <div className="rounded-xl bg-[#E4F0E5] p-4">
+                  <p className="text-xs text-[#738875]">
+                    Income
+                  </p>
+
+                  <p className="mt-2 text-xl font-semibold text-[#48664B]">
+                    {formatCurrency(summary.monthlyIncome)}
+                  </p>
+                </div>
+
+                <div className="rounded-xl bg-[#F9E8E0] p-4">
+                  <p className="text-xs text-[#A17D6E]">
+                    Expenses
+                  </p>
+
+                  <p className="mt-2 text-xl font-semibold text-[#885B4D]">
+                    {formatCurrency(summary.monthlyExpenses)}
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-5 flex items-center justify-between border-t border-[#F0EEE8] pt-4">
+                <span className="text-xs text-[#898B80]">
+                  Monthly savings rate
+                </span>
+
+                <span className="text-sm font-semibold text-[#667B5F]">
+                  {Number(summary.savingsRate || 0).toFixed(1)}%
+                </span>
+              </div>
+            </div>
+
+            {/* SPENDING BY CATEGORY */}
+            <div className="rounded-[20px] border border-[#EAE8DF] bg-white p-5 sm:p-6">
+              <h2 className="text-sm font-semibold text-[#444A40]">
                 Spending by category
               </h2>
 
-              <p
-                className="
-                  mt-1
-                  text-sm
-                  text-gray-500
-                "
-              >
-                Where your money has been going.
+              <p className="mt-1 text-xs text-[#96958A]">
+                Where your money goes
               </p>
-
-            </div>
-
-            <div className="p-5">
 
               {spendingByCategory.length === 0 ? (
-
-                <div
-                  className="
-                    flex
-                    min-h-[150px]
-                    items-center
-                    justify-center
-                    text-center
-                  "
-                >
-
-                  <p
-                    className="
-                      text-sm
-                      text-gray-500
-                    "
-                  >
-                    No expense data available.
-                  </p>
-
-                </div>
-
-              ) : (
-
-                <div className="space-y-4">
-
-                  {spendingByCategory
-                    .slice(0, 6)
-                    .map(
-                      (item, index) => {
-
-                        const percentage =
-                          totalCategorySpending >
-                          0
-                            ? (Number(
-                                item.total
-                              ) /
-                                totalCategorySpending) *
-                              100
-                            : 0;
-
-                        return (
-                          <div
-                            key={`${item.category}-${index}`}
-                          >
-
-                            <div
-                              className="
-                                mb-2
-                                flex
-                                items-center
-                                justify-between
-                                gap-3
-                              "
-                            >
-
-                              <span
-                                className="
-                                  truncate
-                                  text-sm
-                                  text-gray-700
-                                "
-                              >
-                                {item.category}
-                              </span>
-
-                              <span
-                                className="
-                                  shrink-0
-                                  text-sm
-                                  font-medium
-                                  text-gray-900
-                                "
-                              >
-                                {formatCurrency(
-                                  item.total
-                                )}
-                              </span>
-
-                            </div>
-
-                            <div
-                              className="
-                                h-2
-                                overflow-hidden
-                                rounded-full
-                                bg-gray-100
-                              "
-                            >
-
-                              <div
-                                className="
-                                  h-full
-                                  rounded-full
-                                  bg-gray-800
-                                "
-                                style={{
-                                  width: `${percentage}%`,
-                                }}
-                              />
-
-                            </div>
-
-                          </div>
-                        );
-                      }
-                    )}
-
-                </div>
-
-              )}
-
-            </div>
-
-          </section>
-
-        </div>
-
-        {/* =====================================================
-            GOAL PROGRESS
-        ====================================================== */}
-
-        <section
-          className="
-            mt-7
-            overflow-hidden
-            rounded-xl
-            border
-            border-gray-200
-            bg-white
-          "
-        >
-
-          <div
-            className="
-              flex
-              flex-col
-              gap-3
-              border-b
-              border-gray-200
-              p-5
-              sm:flex-row
-              sm:items-center
-              sm:justify-between
-            "
-          >
-
-            <div>
-
-              <h2
-                className="
-                  font-semibold
-                  text-gray-900
-                "
-              >
-                Goal progress
-              </h2>
-
-              <p
-                className="
-                  mt-1
-                  text-sm
-                  text-gray-500
-                "
-              >
-                Track how close you are to your savings goals.
-              </p>
-
-            </div>
-
-            <button
-              onClick={() =>
-                (window.location.href =
-                  "/goals")
-              }
-              className="
-                self-start
-                rounded-lg
-                border
-                border-gray-300
-                px-3
-                py-2
-                text-sm
-                font-medium
-                text-gray-700
-                transition
-                hover:bg-gray-50
-              "
-            >
-              View all goals
-            </button>
-
-          </div>
-
-          <div className="p-5">
-
-            {goalOverview.length === 0 ? (
-
-              <div
-                className="
-                  flex
-                  min-h-[140px]
-                  flex-col
-                  items-center
-                  justify-center
-                  text-center
-                "
-              >
-
-                <div
-                  className="
-                    flex
-                    h-10
-                    w-10
-                    items-center
-                    justify-center
-                    rounded-lg
-                    bg-gray-100
-                  "
-                >
-
-                  <Target
-                    size={20}
-                    className="text-gray-600"
+                <div className="flex min-h-[190px] flex-col items-center justify-center text-center">
+                  <CircleDollarSign
+                    size={30}
+                    className="text-[#B1B5A7]"
                   />
 
+                  <p className="mt-3 text-sm text-[#777D70]">
+                    No spending data yet
+                  </p>
                 </div>
+              ) : (
+                <div className="mt-6 space-y-4">
+                  {spendingByCategory.slice(0, 5).map((item, index) => {
+                    const total = Number(item.total || 0);
 
-                <p
-                  className="
-                    mt-3
-                    text-sm
-                    text-gray-500
-                  "
-                >
-                  You don't have any savings goals yet.
+                    const percentage =
+                      totalCategorySpending > 0
+                        ? (total / totalCategorySpending) * 100
+                        : 0;
+
+                    const colors = [
+                      "bg-[#9EBDA1]",
+                      "bg-[#E5B29C]",
+                      "bg-[#B6ACD8]",
+                      "bg-[#D7C58D]",
+                      "bg-[#A6BEC0]",
+                    ];
+
+                    return (
+                      <div key={`${item.category}-${index}`}>
+                        <div className="mb-2 flex items-center justify-between gap-2">
+                          <span className="truncate text-xs text-[#666E61]">
+                            {item.category}
+                          </span>
+
+                          <span className="text-xs font-semibold text-[#444A40]">
+                            {formatCurrency(total)}
+                          </span>
+                        </div>
+
+                        <div className="h-2 overflow-hidden rounded-full bg-[#F0EFE9]">
+                          <div
+                            className={`h-full rounded-full ${colors[index % colors.length]}`}
+                            style={{
+                              width: `${Math.min(percentage, 100)}%`,
+                            }}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </section>
+
+          {/* ==========================================
+              MONTHLY BUDGETS
+          ========================================== */}
+
+          <section className="mb-8 rounded-[20px] border border-[#EAE8DF] bg-white p-5 sm:p-6">
+            <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h2 className="text-sm font-semibold text-[#444A40]">
+                  Monthly budgets
+                </h2>
+
+                <p className="mt-1 text-xs text-[#96958A]">
+                  Keep your spending within your plans.
+                </p>
+              </div>
+
+              <button
+                onClick={() => navigate("/budgets")}
+                className="flex items-center gap-1 text-xs font-medium text-[#647C5E] transition hover:text-[#405C43]"
+              >
+                View budgets
+                <ArrowRight size={14} />
+              </button>
+            </div>
+
+            {budgetOverview.length === 0 ? (
+              <div className="flex min-h-[150px] flex-col items-center justify-center text-center">
+                <Wallet
+                  size={28}
+                  className="text-[#9BAD96]"
+                />
+
+                <p className="mt-3 text-sm text-[#687466]">
+                  No budgets created yet
                 </p>
 
                 <button
-                  onClick={() =>
-                    (window.location.href =
-                      "/goals")
-                  }
-                  className="
-                    mt-2
-                    text-sm
-                    font-medium
-                    text-green-600
-                    hover:text-green-700
-                  "
+                  onClick={() => navigate("/budgets")}
+                  className="mt-3 rounded-lg bg-[#526B50] px-4 py-2 text-xs font-medium text-white transition hover:bg-[#405B43]"
                 >
-                  Create your first goal
+                  Create a budget
                 </button>
-
               </div>
-
             ) : (
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                {budgetOverview.map((budget, index) => {
+                  const percentage = Number(budget.percentage || 0);
 
-              <div
-                className="
-                  grid
-                  grid-cols-1
-                  gap-4
-                  md:grid-cols-2
-                  xl:grid-cols-3
-                "
-              >
+                  const overBudget =
+                    Number(budget.spent || 0) >
+                    Number(budget.budgetAmount || 0);
 
-                {goalOverview.map(
-                  (goal) => {
+                  const backgrounds = [
+                    "bg-[#E4F0E5]",
+                    "bg-[#F9E8E0]",
+                    "bg-[#EAE7F7]",
+                  ];
 
-                    const percentage =
-                      Math.min(
-                        Number(
-                          goal.percentage || 0
-                        ),
-                        100
-                      );
+                  return (
+                    <div
+                      key={budget.id}
+                      className={`rounded-2xl border border-black/[0.03] p-4 ${backgrounds[index % backgrounds.length]}`}
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <h3 className="truncate text-sm font-semibold text-[#454C41]">
+                          {budget.category}
+                        </h3>
 
-                    return (
-                      <div
-                        key={goal.id}
-                        className="
-                          rounded-lg
-                          border
-                          border-gray-200
-                          p-4
-                        "
-                      >
-
-                        <div
-                          className="
-                            flex
-                            items-start
-                            justify-between
-                            gap-3
-                          "
-                        >
-
-                          <div className="min-w-0">
-
-                            <h3
-                              className="
-                                truncate
-                                font-medium
-                                text-gray-900
-                              "
-                            >
-                              {goal.title}
-                            </h3>
-
-                            {goal.targetDate && (
-                              <p
-                                className="
-                                  mt-1
-                                  text-xs
-                                  text-gray-500
-                                "
-                              >
-                                Target:{" "}
-                                {formatDate(
-                                  goal.targetDate
-                                )}
-                              </p>
-                            )}
-
-                          </div>
-
-                          <span
-                            className="
-                              shrink-0
-                              text-sm
-                              font-semibold
-                              text-green-600
-                            "
-                          >
-                            {percentage.toFixed(0)}%
-                          </span>
-
-                        </div>
-
-                        <div
-                          className="
-                            mt-4
-                            h-2
-                            overflow-hidden
-                            rounded-full
-                            bg-gray-100
-                          "
-                        >
-
-                          <div
-                            className="
-                              h-full
-                              rounded-full
-                              bg-green-600
-                            "
-                            style={{
-                              width: `${percentage}%`,
-                            }}
-                          />
-
-                        </div>
-
-                        <div
-                          className="
-                            mt-3
-                            flex
-                            items-center
-                            justify-between
-                            gap-3
-                          "
-                        >
-
-                          <div>
-
-                            <p
-                              className="
-                                text-xs
-                                text-gray-500
-                              "
-                            >
-                              Saved
-                            </p>
-
-                            <p
-                              className="
-                                mt-0.5
-                                text-sm
-                                font-semibold
-                                text-gray-900
-                              "
-                            >
-                              {formatCurrency(
-                                goal.savedAmount
-                              )}
-                            </p>
-
-                          </div>
-
-                          <div className="text-right">
-
-                            <p
-                              className="
-                                text-xs
-                                text-gray-500
-                              "
-                            >
-                              Target
-                            </p>
-
-                            <p
-                              className="
-                                mt-0.5
-                                text-sm
-                                font-semibold
-                                text-gray-900
-                              "
-                            >
-                              {formatCurrency(
-                                goal.targetAmount
-                              )}
-                            </p>
-
-                          </div>
-
-                        </div>
-
-                        <div
-                          className="
-                            mt-3
-                            border-t
-                            border-gray-100
-                            pt-3
-                          "
-                        >
-
-                          {Number(
-                            goal.remaining
-                          ) > 0 ? (
-
-                            <p
-                              className="
-                                text-xs
-                                text-gray-500
-                              "
-                            >
-                              {formatCurrency(
-                                goal.remaining
-                              )}{" "}
-                              remaining
-                            </p>
-
-                          ) : (
-
-                            <p
-                              className="
-                                text-xs
-                                font-medium
-                                text-green-600
-                              "
-                            >
-                              Goal completed 🎉
-                            </p>
-
-                          )}
-
-                        </div>
-
+                        <span className="text-xs font-semibold text-[#586B55]">
+                          {percentage.toFixed(0)}%
+                        </span>
                       </div>
-                    );
-                  }
-                )}
 
+                      <p className="mt-3 text-lg font-semibold text-[#454C41]">
+                        {formatCurrency(budget.spent)}
+                      </p>
+
+                      <p className="mt-1 text-[11px] text-[#777F70]">
+                        of {formatCurrency(budget.budgetAmount)}
+                      </p>
+
+                      <div className="mt-4 h-2 overflow-hidden rounded-full bg-white/70">
+                        <div
+                          className={`h-full rounded-full ${
+                            overBudget
+                              ? "bg-[#C98770]"
+                              : "bg-[#789675]"
+                          }`}
+                          style={{
+                            width: `${Math.min(Math.max(percentage, 0), 100)}%`,
+                          }}
+                        />
+                      </div>
+
+                      <p className="mt-3 text-[11px] text-[#70796D]">
+                        {overBudget
+                          ? `${formatCurrency(Math.abs(Number(budget.remaining || 0)))} over budget`
+                          : `${formatCurrency(budget.remaining)} remaining`}
+                      </p>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </section>
+
+          {/* ==========================================
+              SAVINGS GOALS
+          ========================================== */}
+
+          <section className="mb-8 rounded-[20px] border border-[#EAE8DF] bg-white p-5 sm:p-6">
+            <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h2 className="text-sm font-semibold text-[#444A40]">
+                  Savings goals
+                </h2>
+
+                <p className="mt-1 text-xs text-[#96958A]">
+                  A little progress every day.
+                </p>
               </div>
 
-            )}
-
-          </div>
-
-        </section>
-
-        {/* =====================================================
-            FINANCIAL INSIGHTS
-        ====================================================== */}
-
-        {insights.length > 0 && (
-          <section
-            className="
-              mt-7
-              overflow-hidden
-              rounded-xl
-              border
-              border-gray-200
-              bg-white
-            "
-          >
-
-            <div
-              className="
-                border-b
-                border-gray-200
-                p-5
-              "
-            >
-
-              <h2
-                className="
-                  font-semibold
-                  text-gray-900
-                "
-              >
-                Financial insights
-              </h2>
-
-              <p
-                className="
-                  mt-1
-                  text-sm
-                  text-gray-500
-                "
-              >
-                A few things worth knowing about your finances.
-              </p>
-
-            </div>
-
-            <div
-              className="
-                grid
-                grid-cols-1
-                gap-4
-                p-5
-                md:grid-cols-2
-                xl:grid-cols-3
-              "
-            >
-
-              {insights
-                .slice(0, 6)
-                .map(
-                  (insight, index) => {
-
-                    const isPositive =
-                      insight.type ===
-                      "positive";
-
-                    const isWarning =
-                      insight.type ===
-                      "warning";
-
-                    return (
-                      <div
-                        key={`${insight.title}-${index}`}
-                        className={`
-                          rounded-lg
-                          border
-                          p-4
-                          ${
-                            isPositive
-                              ? "border-green-200 bg-green-50"
-                              : isWarning
-                              ? "border-yellow-200 bg-yellow-50"
-                              : "border-gray-200 bg-gray-50"
-                          }
-                        `}
-                      >
-
-                        <div
-                          className="
-                            flex
-                            items-start
-                            gap-3
-                          "
-                        >
-
-                          <div
-                            className={`
-                              mt-0.5
-                              h-2.5
-                              w-2.5
-                              shrink-0
-                              rounded-full
-                              ${
-                                isPositive
-                                  ? "bg-green-500"
-                                  : isWarning
-                                  ? "bg-yellow-500"
-                                  : "bg-gray-500"
-                              }
-                            `}
-                          />
-
-                          <div className="min-w-0">
-
-                            <h3
-                              className={`
-                                text-sm
-                                font-semibold
-                                ${
-                                  isPositive
-                                    ? "text-green-800"
-                                    : isWarning
-                                    ? "text-yellow-800"
-                                    : "text-gray-800"
-                                }
-                              `}
-                            >
-                              {insight.title}
-                            </h3>
-
-                            <p
-                              className="
-                                mt-1.5
-                                text-sm
-                                leading-5
-                                text-gray-600
-                              "
-                            >
-                              {insight.message}
-                            </p>
-
-                          </div>
-
-                        </div>
-
-                      </div>
-                    );
-                  }
-                )}
-
-            </div>
-
-          </section>
-        )}
-
-        {/* =====================================================
-            RECENT TRANSACTIONS
-        ====================================================== */}
-
-        <section
-          className="
-            mt-7
-            overflow-hidden
-            rounded-xl
-            border
-            border-gray-200
-            bg-white
-          "
-        >
-
-          <div
-            className="
-              flex
-              flex-col
-              gap-3
-              border-b
-              border-gray-200
-              p-5
-              sm:flex-row
-              sm:items-center
-              sm:justify-between
-            "
-          >
-
-            <div>
-
-              <h2
-                className="
-                  font-semibold
-                  text-gray-900
-                "
-              >
-                Recent transactions
-              </h2>
-
-              <p
-                className="
-                  mt-1
-                  text-sm
-                  text-gray-500
-                "
-              >
-                Your latest income and expenses.
-              </p>
-
-            </div>
-
-            {recentTransactions.length > 0 && (
               <button
-                onClick={() =>
-                  (window.location.href =
-                    "/transactions")
-                }
-                className="
-                  self-start
-                  rounded-lg
-                  border
-                  border-gray-300
-                  px-3
-                  py-2
-                  text-sm
-                  font-medium
-                  text-gray-700
-                  hover:bg-gray-50
-                "
+                onClick={() => navigate("/goals")}
+                className="flex items-center gap-1 text-xs font-medium text-[#647C5E] transition hover:text-[#405C43]"
+              >
+                View goals
+                <ArrowRight size={14} />
+              </button>
+            </div>
+
+            {goalOverview.length === 0 ? (
+              <div className="flex min-h-[150px] flex-col items-center justify-center text-center">
+                <Target
+                  size={28}
+                  className="text-[#B2A7D3]"
+                />
+
+                <p className="mt-3 text-sm text-[#687466]">
+                  No savings goals yet
+                </p>
+
+                <button
+                  onClick={() => navigate("/goals")}
+                  className="mt-3 rounded-lg bg-[#526B50] px-4 py-2 text-xs font-medium text-white transition hover:bg-[#405B43]"
+                >
+                  Create a goal
+                </button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                {goalOverview.map((goal, index) => {
+                  const percentage = Math.min(
+                    Math.max(Number(goal.percentage || 0), 0),
+                    100
+                  );
+
+                  const backgrounds = [
+                    "bg-[#E4F0E5]",
+                    "bg-[#F9E8E0]",
+                    "bg-[#EAE7F7]",
+                  ];
+
+                  const ringColors = [
+                    "#779B79",
+                    "#C98770",
+                    "#9486BB",
+                  ];
+
+                  return (
+                    <div
+                      key={goal.id}
+                      className={`flex items-center gap-4 rounded-2xl border border-black/[0.03] p-4 ${backgrounds[index % backgrounds.length]}`}
+                    >
+                      <div
+                        className="flex h-[76px] w-[76px] shrink-0 items-center justify-center rounded-full"
+                        style={{
+                          background: `conic-gradient(${ringColors[index % ringColors.length]} ${percentage}%, rgba(255,255,255,0.8) ${percentage}% 100%)`,
+                        }}
+                      >
+                        <div className="flex h-[57px] w-[57px] items-center justify-center rounded-full bg-white text-xs font-semibold text-[#495345]">
+                          {percentage.toFixed(0)}%
+                        </div>
+                      </div>
+
+                      <div className="min-w-0 flex-1">
+                        <h3 className="truncate text-sm font-semibold text-[#454C41]">
+                          {goal.title}
+                        </h3>
+
+                        <p className="mt-2 text-[11px] text-[#777F70]">
+                          Saved {formatCurrency(goal.savedAmount)}
+                        </p>
+
+                        <p className="mt-1 text-[11px] text-[#777F70]">
+                          Target {formatCurrency(goal.targetAmount)}
+                        </p>
+
+                        {goal.targetDate && (
+                          <p className="mt-2 text-[10px] text-[#909488]">
+                            By {formatDate(goal.targetDate)}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </section>
+
+          {/* ==========================================
+              FINANCIAL INSIGHTS
+          ========================================== */}
+
+          {insights.length > 0 && (
+            <section className="mb-8">
+              <div className="mb-4 flex items-center gap-2">
+                <Sparkles
+                  size={17}
+                  className="text-[#B89566]"
+                />
+
+                <h2 className="text-sm font-semibold text-[#444A40]">
+                  Financial insights
+                </h2>
+              </div>
+
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+                {insights.slice(0, 6).map((insight, index) => (
+                  <div
+                    key={`${insight.title}-${index}`}
+                    className="rounded-2xl border border-[#EAE8DF] bg-white p-4 transition hover:shadow-sm"
+                  >
+                    <h3 className="text-xs font-semibold text-[#4D584B]">
+                      {insight.title}
+                    </h3>
+
+                    <p className="mt-2 text-xs leading-5 text-[#85877B]">
+                      {insight.message}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {/* ==========================================
+              RECENT TRANSACTIONS
+          ========================================== */}
+
+          <section className="overflow-hidden rounded-[20px] border border-[#EAE8DF] bg-white">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#F0EEE8] p-5 sm:px-6">
+              <div>
+                <h2 className="text-sm font-semibold text-[#444A40]">
+                  Recent transactions
+                </h2>
+
+                <p className="mt-1 text-xs text-[#96958A]">
+                  Your latest financial activity.
+                </p>
+              </div>
+
+              <button
+                onClick={() => navigate("/transactions")}
+                className="flex items-center gap-1 text-xs font-medium text-[#647C5E] transition hover:text-[#405C43]"
               >
                 View all
+                <ArrowRight size={14} />
               </button>
-            )}
-
-          </div>
-
-          {recentTransactions.length === 0 ? (
-
-            <div
-              className="
-                flex
-                min-h-[150px]
-                flex-col
-                items-center
-                justify-center
-                p-5
-                text-center
-              "
-            >
-
-              <p
-                className="
-                  text-sm
-                  text-gray-500
-                "
-              >
-                No transactions yet.
-              </p>
-
-              <button
-                onClick={() =>
-                  (window.location.href =
-                    "/transactions")
-                }
-                className="
-                  mt-2
-                  text-sm
-                  font-medium
-                  text-green-600
-                  hover:text-green-700
-                "
-              >
-                Add your first transaction
-              </button>
-
             </div>
 
-          ) : (
+            {recentTransactions.length === 0 ? (
+              <div className="flex min-h-[150px] flex-col items-center justify-center text-center">
+                <Receipt
+                  size={28}
+                  className="text-[#A4AA9A]"
+                />
 
-            <>
+                <p className="mt-3 text-sm text-[#687466]">
+                  No transactions yet
+                </p>
+              </div>
+            ) : (
+              <>
+                {/* DESKTOP TABLE */}
+                <div className="hidden overflow-x-auto md:block">
+                  <table className="w-full">
+                    <thead className="bg-[#FAF9F5]">
+                      <tr>
+                        {[
+                          "Transaction",
+                          "Category",
+                          "Date",
+                          "Amount",
+                        ].map((heading) => (
+                          <th
+                            key={heading}
+                            className={`px-5 py-4 text-[10px] font-semibold uppercase tracking-wider text-[#929387] ${
+                              heading === "Amount"
+                                ? "text-right"
+                                : "text-left"
+                            }`}
+                          >
+                            {heading}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
 
-              {/* DESKTOP */}
-
-              <div
-                className="
-                  hidden
-                  overflow-x-auto
-                  md:block
-                "
-              >
-
-                <table className="w-full">
-
-                  <thead
-                    className="
-                      border-b
-                      border-gray-200
-                      bg-gray-50
-                    "
-                  >
-
-                    <tr>
-
-                      <th
-                        className="
-                          px-5
-                          py-3
-                          text-left
-                          text-xs
-                          font-semibold
-                          uppercase
-                          tracking-wide
-                          text-gray-500
-                        "
-                      >
-                        Transaction
-                      </th>
-
-                      <th
-                        className="
-                          px-5
-                          py-3
-                          text-left
-                          text-xs
-                          font-semibold
-                          uppercase
-                          tracking-wide
-                          text-gray-500
-                        "
-                      >
-                        Category
-                      </th>
-
-                      <th
-                        className="
-                          px-5
-                          py-3
-                          text-left
-                          text-xs
-                          font-semibold
-                          uppercase
-                          tracking-wide
-                          text-gray-500
-                        "
-                      >
-                        Date
-                      </th>
-
-                      <th
-                        className="
-                          px-5
-                          py-3
-                          text-right
-                          text-xs
-                          font-semibold
-                          uppercase
-                          tracking-wide
-                          text-gray-500
-                        "
-                      >
-                        Amount
-                      </th>
-
-                    </tr>
-
-                  </thead>
-
-                  <tbody>
-
-                    {recentTransactions.map(
-                      (transaction) => {
-
+                    <tbody>
+                      {recentTransactions.map((transaction) => {
                         const isIncome =
-                          transaction.type ===
-                          "income";
+                          transaction.type === "income";
 
                         return (
                           <tr
-                            key={
-                              transaction.id
-                            }
-                            className="
-                              border-b
-                              border-gray-100
-                              last:border-0
-                            "
+                            key={transaction.id}
+                            className="border-t border-[#F1EFE9] transition hover:bg-[#FCFBF8]"
                           >
-
-                            <td
-                              className="
-                                px-5
-                                py-4
-                              "
-                            >
-
-                              <p
-                                className="
-                                  font-medium
-                                  text-gray-900
-                                "
-                              >
-                                {transaction.title}
-                              </p>
-
-                            </td>
-
-                            <td
-                              className="
-                                px-5
-                                py-4
-                              "
-                            >
-
-                              <span
-                                className="
-                                  text-sm
-                                  text-gray-600
-                                "
-                              >
-                                {
-                                  transaction.category
-                                }
-                              </span>
-
-                            </td>
-
-                            <td
-                              className="
-                                px-5
-                                py-4
-                              "
-                            >
-
-                              <span
-                                className="
-                                  text-sm
-                                  text-gray-500
-                                "
-                              >
-                                {formatDate(
-                                  transaction.transaction_date
-                                )}
-                              </span>
-
-                            </td>
-
-                            <td
-                              className={`
-                                px-5
-                                py-4
-                                text-right
-                                font-medium
-                                ${
-                                  isIncome
-                                    ? "text-green-600"
-                                    : "text-red-600"
-                                }
-                              `}
-                            >
-
-                              {isIncome
-                                ? "+"
-                                : "-"}
-
-                              {formatCurrency(
-                                transaction.amount
-                              )}
-
-                            </td>
-
-                          </tr>
-                        );
-                      }
-                    )}
-
-                  </tbody>
-
-                </table>
-
-              </div>
-
-              {/* MOBILE */}
-
-              <div
-                className="
-                  divide-y
-                  divide-gray-100
-                  md:hidden
-                "
-              >
-
-                {recentTransactions.map(
-                  (transaction) => {
-
-                    const isIncome =
-                      transaction.type ===
-                      "income";
-
-                    return (
-                      <div
-                        key={
-                          transaction.id
-                        }
-                        className="p-4"
-                      >
-
-                        <div
-                          className="
-                            flex
-                            items-start
-                            justify-between
-                            gap-4
-                          "
-                        >
-
-                          <div className="min-w-0">
-
-                            <p
-                              className="
-                                truncate
-                                font-medium
-                                text-gray-900
-                              "
-                            >
+                            <td className="px-5 py-4 text-sm font-medium text-[#454C41]">
                               {transaction.title}
-                            </p>
+                            </td>
 
-                            <p
-                              className="
-                                mt-1
-                                text-xs
-                                text-gray-500
-                              "
-                            >
-                              {
-                                transaction.category
-                              }
-                            </p>
+                            <td className="px-5 py-4">
+                              <span className="rounded-lg bg-[#F3F1EA] px-2.5 py-1 text-[11px] text-[#70786C]">
+                                {transaction.category}
+                              </span>
+                            </td>
 
-                            <p
-                              className="
-                                mt-1
-                                text-xs
-                                text-gray-400
-                              "
-                            >
+                            <td className="px-5 py-4 text-xs text-[#929387]">
                               {formatDate(
                                 transaction.transaction_date
                               )}
-                            </p>
+                            </td>
 
-                          </div>
-
-                          <p
-                            className={`
-                              shrink-0
-                              text-sm
-                              font-semibold
-                              ${
+                            <td
+                              className={`px-5 py-4 text-right text-sm font-semibold ${
                                 isIncome
-                                  ? "text-green-600"
-                                  : "text-red-600"
-                              }
-                            `}
-                          >
+                                  ? "text-[#628365]"
+                                  : "text-[#BB806D]"
+                              }`}
+                            >
+                              {isIncome ? "+" : "-"}
+                              {formatCurrency(transaction.amount)}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
 
-                            {isIncome
-                              ? "+"
-                              : "-"}
+                {/* MOBILE LIST */}
+                <div className="divide-y divide-[#F0EEE8] md:hidden">
+                  {recentTransactions.map((transaction) => {
+                    const isIncome =
+                      transaction.type === "income";
 
-                            {formatCurrency(
-                              transaction.amount
-                            )}
-
+                    return (
+                      <div
+                        key={transaction.id}
+                        className="flex items-center justify-between gap-3 p-4"
+                      >
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-medium text-[#454C41]">
+                            {transaction.title}
                           </p>
 
+                          <p className="mt-1 text-[11px] text-[#929387]">
+                            {transaction.category} ·{" "}
+                            {formatDate(
+                              transaction.transaction_date
+                            )}
+                          </p>
                         </div>
 
+                        <p
+                          className={`shrink-0 text-sm font-semibold ${
+                            isIncome
+                              ? "text-[#628365]"
+                              : "text-[#BB806D]"
+                          }`}
+                        >
+                          {isIncome ? "+" : "-"}
+                          {formatCurrency(transaction.amount)}
+                        </p>
                       </div>
                     );
-                  }
-                )}
+                  })}
+                </div>
+              </>
+            )}
+          </section>
 
-              </div>
+          {/* FOOTER */}
+          <footer className="mt-7 flex flex-col items-center justify-between gap-2 border-t border-[#EAE8DF] pt-5 text-[10px] text-[#A0A092] sm:flex-row">
+            <p>FinTrack · Personal Finance Intelligence</p>
+            <p>Make every rupee count.</p>
+          </footer>
 
-            </>
-
-          )}
-
-        </section>
-
+        </div>
       </main>
-
     </div>
   );
 }
