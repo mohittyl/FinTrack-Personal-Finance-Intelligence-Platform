@@ -1,21 +1,86 @@
-const express = require("express");
 
+const express = require("express");
 const pool = require("../config/db");
 const authMiddleware = require("../middleware/authMiddleware");
 
 const router = express.Router();
 
+const MAX_AMOUNT = 9999999999.99;
+
+const isValidId = (id) => {
+  return Number.isInteger(id) && id > 0;
+};
+
+const isValidAmount = (value, allowZero = false) => {
+  if (value === undefined || value === null || value === "") {
+    return false;
+  }
+
+  const amount = Number(value);
+
+  if (!Number.isFinite(amount) || amount > MAX_AMOUNT) {
+    return false;
+  }
+
+  if (allowZero ? amount < 0 : amount <= 0) {
+    return false;
+  }
+
+  return Math.round(amount * 100) === amount * 100;
+};
+
+const isValidDate = (date) => {
+  if (date === null || date === undefined || date === "") {
+    return true;
+  }
+
+  if (typeof date !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    return false;
+  }
+
+  const parsedDate = new Date(`${date}T00:00:00.000Z`);
+
+  return (
+    !Number.isNaN(parsedDate.getTime()) &&
+    parsedDate.toISOString().slice(0, 10) === date
+  );
+};
+
+const validateGoal = (title, targetAmount, savedAmount, targetDate) => {
+  if (
+    typeof title !== "string" ||
+    !title.trim() ||
+    title.trim().length > 150
+  ) {
+    return "Goal title must contain between 1 and 150 characters";
+  }
+
+  if (!isValidAmount(targetAmount)) {
+    return "Please enter a valid target amount";
+  }
+
+  if (!isValidAmount(savedAmount, true)) {
+    return "Please enter a valid saved amount";
+  }
+
+  if (Number(savedAmount) > Number(targetAmount)) {
+    return "Saved amount cannot be greater than target amount";
+  }
+
+  if (!isValidDate(targetDate)) {
+    return "Please enter a valid target date";
+  }
+
+  return null;
+};
+
 /*
-=====================================================
 GET ALL GOALS
 GET /api/goals
-=====================================================
 */
 
 router.get("/", authMiddleware, async (req, res) => {
   try {
-    const userId = req.user.id;
-
     const result = await pool.query(
       `
       SELECT
@@ -27,15 +92,12 @@ router.get("/", authMiddleware, async (req, res) => {
         created_at
       FROM goals
       WHERE user_id = $1
-      ORDER BY
-        target_date ASC NULLS LAST,
-        id DESC
+      ORDER BY target_date ASC NULLS LAST, id DESC
       `,
-      [userId]
+      [req.user.id]
     );
 
     res.status(200).json(result.rows);
-
   } catch (error) {
     console.error("Get goals error:", error);
 
@@ -45,65 +107,36 @@ router.get("/", authMiddleware, async (req, res) => {
   }
 });
 
-
 /*
-=====================================================
 CREATE GOAL
 POST /api/goals
-=====================================================
 */
 
 router.post("/", authMiddleware, async (req, res) => {
   try {
-    const userId = req.user.id;
-
     const {
       title,
       target_amount,
-      saved_amount,
+      saved_amount = 0,
       target_date,
     } = req.body;
 
-    // Validation
+    const validationError = validateGoal(
+      title,
+      target_amount,
+      saved_amount,
+      target_date
+    );
 
-    if (!title || !title.trim()) {
+    if (validationError) {
       return res.status(400).json({
-        error: "Goal title is required",
-      });
-    }
-
-    if (
-      target_amount === undefined ||
-      Number(target_amount) <= 0
-    ) {
-      return res.status(400).json({
-        error: "Valid target amount is required",
-      });
-    }
-
-    const savedAmount =
-      Number(saved_amount || 0);
-
-    const targetAmount =
-      Number(target_amount);
-
-    if (savedAmount < 0) {
-      return res.status(400).json({
-        error: "Saved amount cannot be negative",
-      });
-    }
-
-    if (savedAmount > targetAmount) {
-      return res.status(400).json({
-        error:
-          "Saved amount cannot be greater than target amount",
+        error: validationError,
       });
     }
 
     const result = await pool.query(
       `
-      INSERT INTO goals
-      (
+      INSERT INTO goals (
         user_id,
         title,
         target_amount,
@@ -120,10 +153,10 @@ router.post("/", authMiddleware, async (req, res) => {
         created_at
       `,
       [
-        userId,
+        req.user.id,
         title.trim(),
-        targetAmount,
-        savedAmount,
+        Number(target_amount),
+        Number(saved_amount),
         target_date || null,
       ]
     );
@@ -132,7 +165,6 @@ router.post("/", authMiddleware, async (req, res) => {
       message: "Goal created successfully",
       goal: result.rows[0],
     });
-
   } catch (error) {
     console.error("Create goal error:", error);
 
@@ -142,64 +174,38 @@ router.post("/", authMiddleware, async (req, res) => {
   }
 });
 
-
 /*
-=====================================================
 UPDATE GOAL
 PUT /api/goals/:id
-=====================================================
 */
 
 router.put("/:id", authMiddleware, async (req, res) => {
   try {
-    const userId = req.user.id;
-
     const goalId = Number(req.params.id);
 
-    const {
-      title,
-      target_amount,
-      saved_amount,
-      target_date,
-    } = req.body;
-
-    if (!Number.isInteger(goalId)) {
+    if (!isValidId(goalId)) {
       return res.status(400).json({
         error: "Invalid goal id",
       });
     }
 
-    if (!title || !title.trim()) {
+    const {
+      title,
+      target_amount,
+      saved_amount = 0,
+      target_date,
+    } = req.body;
+
+    const validationError = validateGoal(
+      title,
+      target_amount,
+      saved_amount,
+      target_date
+    );
+
+    if (validationError) {
       return res.status(400).json({
-        error: "Goal title is required",
-      });
-    }
-
-    if (
-      target_amount === undefined ||
-      Number(target_amount) <= 0
-    ) {
-      return res.status(400).json({
-        error: "Valid target amount is required",
-      });
-    }
-
-    const targetAmount =
-      Number(target_amount);
-
-    const savedAmount =
-      Number(saved_amount || 0);
-
-    if (savedAmount < 0) {
-      return res.status(400).json({
-        error: "Saved amount cannot be negative",
-      });
-    }
-
-    if (savedAmount > targetAmount) {
-      return res.status(400).json({
-        error:
-          "Saved amount cannot be greater than target amount",
+        error: validationError,
       });
     }
 
@@ -223,11 +229,11 @@ router.put("/:id", authMiddleware, async (req, res) => {
       `,
       [
         title.trim(),
-        targetAmount,
-        savedAmount,
+        Number(target_amount),
+        Number(saved_amount),
         target_date || null,
         goalId,
-        userId,
+        req.user.id,
       ]
     );
 
@@ -241,7 +247,6 @@ router.put("/:id", authMiddleware, async (req, res) => {
       message: "Goal updated successfully",
       goal: result.rows[0],
     });
-
   } catch (error) {
     console.error("Update goal error:", error);
 
@@ -251,201 +256,122 @@ router.put("/:id", authMiddleware, async (req, res) => {
   }
 });
 
-
 /*
-=====================================================
 ADD MONEY TO GOAL
 PATCH /api/goals/:id/add-money
-=====================================================
 */
 
-router.patch(
-  "/:id/add-money",
-  authMiddleware,
-  async (req, res) => {
-    try {
-      const userId = req.user.id;
+router.patch("/:id/add-money", authMiddleware, async (req, res) => {
+  try {
+    const goalId = Number(req.params.id);
+    const { amount } = req.body;
 
-      const goalId =
-        Number(req.params.id);
+    if (!isValidId(goalId)) {
+      return res.status(400).json({
+        error: "Invalid goal id",
+      });
+    }
 
-      const { amount } = req.body;
+    if (!isValidAmount(amount)) {
+      return res.status(400).json({
+        error: "Please enter a valid amount",
+      });
+    }
 
-      if (!Number.isInteger(goalId)) {
-        return res.status(400).json({
-          error: "Invalid goal id",
-        });
-      }
+    const result = await pool.query(
+      `
+      UPDATE goals
+      SET saved_amount = saved_amount + $1
+      WHERE id = $2
+      AND user_id = $3
+      AND saved_amount + $1 <= target_amount
+      RETURNING
+        id,
+        title,
+        target_amount,
+        saved_amount,
+        target_date,
+        created_at
+      `,
+      [Number(amount), goalId, req.user.id]
+    );
 
-      if (
-        amount === undefined ||
-        Number(amount) <= 0
-      ) {
-        return res.status(400).json({
-          error: "Valid amount is required",
-        });
-      }
+    if (result.rows.length === 0) {
+      const goalExists = await pool.query(
+        `
+        SELECT id
+        FROM goals
+        WHERE id = $1
+        AND user_id = $2
+        `,
+        [goalId, req.user.id]
+      );
 
-      const addAmount =
-        Number(amount);
-
-      /*
-      Get current goal
-      */
-
-      const goalResult =
-        await pool.query(
-          `
-          SELECT
-            id,
-            target_amount,
-            saved_amount
-          FROM goals
-          WHERE id = $1
-          AND user_id = $2
-          `,
-          [goalId, userId]
-        );
-
-      if (goalResult.rows.length === 0) {
+      if (goalExists.rows.length === 0) {
         return res.status(404).json({
           error: "Goal not found",
         });
       }
 
-      const goal =
-        goalResult.rows[0];
-
-      const targetAmount =
-        Number(
-          goal.target_amount
-        );
-
-      const currentSaved =
-        Number(
-          goal.saved_amount
-        );
-
-      const newSavedAmount =
-        currentSaved + addAmount;
-
-      if (
-        newSavedAmount >
-        targetAmount
-      ) {
-        return res.status(400).json({
-          error:
-            "Added amount would exceed the goal target",
-        });
-      }
-
-      /*
-      Update saved amount
-      */
-
-      const result =
-        await pool.query(
-          `
-          UPDATE goals
-          SET saved_amount = $1
-          WHERE id = $2
-          AND user_id = $3
-          RETURNING
-            id,
-            title,
-            target_amount,
-            saved_amount,
-            target_date,
-            created_at
-          `,
-          [
-            newSavedAmount,
-            goalId,
-            userId,
-          ]
-        );
-
-      res.status(200).json({
-        message:
-          "Money added successfully",
-        goal: result.rows[0],
-      });
-
-    } catch (error) {
-      console.error(
-        "Add money error:",
-        error
-      );
-
-      res.status(500).json({
-        error:
-          "Unable to add money to goal",
+      return res.status(400).json({
+        error: "Added amount would exceed the goal target",
       });
     }
-  }
-);
 
+    res.status(200).json({
+      message: "Money added successfully",
+      goal: result.rows[0],
+    });
+  } catch (error) {
+    console.error("Add money error:", error);
+
+    res.status(500).json({
+      error: "Unable to add money to goal",
+    });
+  }
+});
 
 /*
-=====================================================
 DELETE GOAL
 DELETE /api/goals/:id
-=====================================================
 */
 
-router.delete(
-  "/:id",
-  authMiddleware,
-  async (req, res) => {
-    try {
-      const userId = req.user.id;
+router.delete("/:id", authMiddleware, async (req, res) => {
+  try {
+    const goalId = Number(req.params.id);
 
-      const goalId =
-        Number(req.params.id);
-
-      if (!Number.isInteger(goalId)) {
-        return res.status(400).json({
-          error: "Invalid goal id",
-        });
-      }
-
-      const result =
-        await pool.query(
-          `
-          DELETE FROM goals
-          WHERE id = $1
-          AND user_id = $2
-          RETURNING id
-          `,
-          [
-            goalId,
-            userId,
-          ]
-        );
-
-      if (result.rows.length === 0) {
-        return res.status(404).json({
-          error: "Goal not found",
-        });
-      }
-
-      res.status(200).json({
-        message:
-          "Goal deleted successfully",
-      });
-
-    } catch (error) {
-      console.error(
-        "Delete goal error:",
-        error
-      );
-
-      res.status(500).json({
-        error: "Unable to delete goal",
+    if (!isValidId(goalId)) {
+      return res.status(400).json({
+        error: "Invalid goal id",
       });
     }
-  }
-);
 
+    const result = await pool.query(
+      `
+      DELETE FROM goals
+      WHERE id = $1
+      AND user_id = $2
+      RETURNING id
+      `,
+      [goalId, req.user.id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        error: "Goal not found",
+      });
+    }
+
+    res.status(200).json({
+      message: "Goal deleted successfully",
+    });
+  } catch (error) {
+    console.error("Delete goal error:", error);
+
+    res.status(500).json({
+      error: "Unable to delete goal",
+    });
+  }
+});
 
 module.exports = router;
