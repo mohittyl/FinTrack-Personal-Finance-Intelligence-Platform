@@ -297,6 +297,35 @@ function Budgets() {
       ? (totalSpent / totalBudget) * 100
       : 0;
 
+  const budgetAlerts = budgets
+    .map((budget) => {
+      const amount = Number(budget.amount || 0);
+      const spent = Number(budget.spent || 0);
+
+      const percentage =
+        amount > 0 ? (spent / amount) * 100 : 0;
+
+      if (percentage < 80) {
+        return null;
+      }
+
+      return {
+        id: budget.id,
+        category: budget.category,
+        amount,
+        spent,
+        percentage,
+        remaining: amount - spent,
+        status:
+          percentage > 100
+            ? "over"
+            : percentage === 100
+              ? "reached"
+              : "warning",
+      };
+    })
+    .filter(Boolean);
+
   return (
     <div className="min-h-screen bg-[#E9EDE5]">
       <Sidebar
@@ -488,6 +517,72 @@ function Budgets() {
               <div className="mt-3 flex justify-between text-xs text-[#929387]">
                 <span>{formatCurrency(totalSpent)} spent</span>
                 <span>{formatCurrency(totalBudget)} planned</span>
+              </div>
+            </section>
+          )}
+
+          {/* BUDGET ALERTS */}
+          {budgetAlerts.length > 0 && (
+            <section className="mb-8 rounded-[20px] border border-[#F0D8CC] bg-[#FFF8F3] p-5 sm:p-6">
+              <div className="mb-4 flex items-center justify-between">
+                <div>
+                  <h2 className="text-sm font-semibold text-[#65483D]">
+                    Budget alerts
+                  </h2>
+                  <p className="mt-1 text-xs text-[#A17C6E]">
+                    Keep an eye on categories approaching their limits.
+                  </p>
+                </div>
+
+                <span className="rounded-full bg-[#F9E5DC] px-3 py-1 text-xs font-semibold text-[#A45F4F]">
+                  {budgetAlerts.length} alerts
+                </span>
+              </div>
+
+              <div className="space-y-3">
+                {budgetAlerts.map((alert) => (
+                  <div
+                    key={alert.id}
+                    className="flex flex-col justify-between gap-2 rounded-xl border border-[#F0D8CC] bg-white p-4 sm:flex-row sm:items-center"
+                  >
+                    <div>
+                      <p className="text-sm font-semibold text-[#454C41]">
+                        {alert.category}
+                      </p>
+
+                      <p className="mt-1 text-xs text-[#929387]">
+                        {formatCurrency(alert.spent)} spent out of{" "}
+                        {formatCurrency(alert.amount)}
+                      </p>
+                    </div>
+
+                    <div className="text-left sm:text-right">
+                      <span
+                        className={`inline-block rounded-full px-3 py-1 text-xs font-semibold ${
+                          alert.status === "over"
+                            ? "bg-[#F4D5CA] text-[#A45F4F]"
+                            : alert.status === "reached"
+                              ? "bg-[#F1E6CF] text-[#967849]"
+                              : "bg-[#F2F0E4] text-[#817D68]"
+                        }`}
+                      >
+                        {alert.status === "over"
+                          ? "Overspending"
+                          : alert.status === "reached"
+                            ? "Limit reached"
+                            : "Near limit"}
+                      </span>
+
+                      <p className="mt-2 text-xs text-[#929387]">
+                        {alert.status === "over"
+                          ? `${formatCurrency(Math.abs(alert.remaining))} over budget`
+                          : alert.status === "reached"
+                            ? "You have used your full budget"
+                            : `${formatCurrency(alert.remaining)} remaining`}
+                      </p>
+                    </div>
+                  </div>
+                ))}
               </div>
             </section>
           )}
