@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FinTrack — Secure Authentication</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body class="center">
+  <!-- Modern SaaS Auth Card -->
+  <div class="auth-card">
+    <div class="auth-brand">
+      <div class="auth-logo-badge">💰</div>
+      <h1>FinTrack</h1>
+      <p class="subtitle">Personal Finance Intelligence Platform</p>
+    </div>
+
+    <!-- Segmented Tab Switcher -->
+    <div class="tabs">
+      <button id="tabLogin" class="tab active">
+        <span>🔑</span> Sign In
+      </button>
+      <button id="tabRegister" class="tab">
+        <span>✨</span> Create Account
+      </button>
+    </div>
+
+    <!-- Form Inputs (IDs preserved for login.js) -->
+    <div id="nameWrapper" style="display:none;">
+      <label class="form-label">Full Name</label>
+      <input id="name" placeholder="e.g. Mohit Tayal" />
+    </div>
+
+    <div>
+      <label class="form-label">Email Address</label>
+      <input id="email" type="email" placeholder="name@example.com" />
+    </div>
+
+    <div>
+      <label class="form-label">Password</label>
+      <input id="password" type="password" placeholder="At least 6 characters" />
+    </div>
+
+    <button id="submitBtn" class="btn btn-full">
+      Sign In <span>→</span>
+    </button>
+
+    <!-- Error message output -->
+    <p id="msg" class="error" style="text-align:center;"></p>
+  </div>
+
+  <script src="js/login.js"></script>
+</body>
+</html>

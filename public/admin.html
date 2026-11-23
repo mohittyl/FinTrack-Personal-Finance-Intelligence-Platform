@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FinTrack — Admin Console</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <!-- Frosted Glass Navbar -->
+  <header class="navbar" id="navbar"></header>
+
+  <main class="container">
+    <div class="page-header">
+      <h1 class="page-title">🛡️ Admin Console</h1>
+      <p class="page-subtitle">User management, access roles, and platform metrics</p>
+    </div>
+
+    <!-- Platform Stats Cards -->
+    <div class="stats">
+      <div class="stat-card">
+        <div class="stat-card-top">
+          <p>Total Registered</p>
+          <div class="stat-badge-icon purple">👥</div>
+        </div>
+        <h2 id="sTotal">0</h2>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-card-top">
+          <p>Administrators</p>
+          <div class="stat-badge-icon amber">🛡️</div>
+        </div>
+        <h2 id="sAdmins">0</h2>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-card-top">
+          <p>Standard Users</p>
+          <div class="stat-badge-icon emerald">🧑‍💻</div>
+        </div>
+        <h2 id="sUsers">0</h2>
+      </div>
+    </div>
+
+    <!-- User Management Table Card -->
+    <div class="card">
+      <div class="card-header">
+        <div class="icon">📋</div>
+        <h3>Registered Accounts</h3>
+      </div>
+
+      <div class="search-row">
+        <input id="search" placeholder="🔍 Search by name or email address..." />
+        <button id="searchBtn" class="btn">Filter</button>
+      </div>
+
+      <div class="table-responsive">
+        <table>
+          <thead>
+            <tr>
+              <th style="width:60px;">ID</th>
+              <th>User</th>
+              <th>Email</th>
+              <th>Role</th>
+              <th>Created</th>
+              <th style="text-align:right;">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="list"></tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+
+  <!-- Toast Notification Container -->
+  <div id="toast"></div>
+
+  <script src="js/common.js"></script>
+  <script src="js/admin.js"></script>
+</body>
+</html>

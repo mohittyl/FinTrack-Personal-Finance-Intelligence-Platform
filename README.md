@@ -164,3 +164,9 @@ The backend uses Express routes to handle API requests. PostgreSQL queries use t
 - **Recurring payments:** record repeating payments.
 - **Dashboard and analytics:** review totals and income/expense activity.
 - **Settings:** update account details.
+
+
+## Reports & Financial Statement Module
+
+- `routes/reports.js` — monthly financial statements, category analysis, 6-month trends, and summary metrics.
+- `public/dashboard.html` — interactive dashboard and printable/downloadable monthly statements with Chart.js & html2pdf.
