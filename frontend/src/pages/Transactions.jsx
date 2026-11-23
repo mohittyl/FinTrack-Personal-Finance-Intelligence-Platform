@@ -69,6 +69,7 @@ function Transactions() {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [formData, setFormData] = useState(emptyForm);
+  const [isCustomCategory, setIsCustomCategory] = useState(false);
 
   // ==========================================
   // QUERY PARAMETERS
@@ -145,9 +146,19 @@ function Transactions() {
 
       // Keep useful filter choices available even for a new account.
       // Backend categories are retained and merged without duplicates.
-      const combinedCategories = [
-        ...new Set([...DEFAULT_CATEGORIES, ...backendCategories]),
-      ].sort((a, b) => String(a).localeCompare(String(b)));
+      const categoryMap = new Map();
+
+      [...DEFAULT_CATEGORIES, ...backendCategories].forEach((name) => {
+        const cleanName = String(name || "").trim();
+
+        if (cleanName && !categoryMap.has(cleanName.toLowerCase())) {
+          categoryMap.set(cleanName.toLowerCase(), cleanName);
+        }
+      });
+
+      const combinedCategories = [...categoryMap.values()].sort((a, b) =>
+        a.localeCompare(b)
+      );
 
       setCategories(combinedCategories);
     } catch (err) {
@@ -220,6 +231,7 @@ function Transactions() {
   function addForm() {
     setEditingId(null);
     setFormData(emptyForm());
+    setIsCustomCategory(false);
     setError("");
     setShowForm(true);
   }
@@ -237,6 +249,12 @@ function Transactions() {
       ).slice(0, 10),
     });
 
+    setIsCustomCategory(
+      !categories.some(
+        (name) => name.toLowerCase() === String(item.category).toLowerCase()
+      )
+    );
+
     setError("");
     setShowForm(true);
   }
@@ -247,6 +265,7 @@ function Transactions() {
     setShowForm(false);
     setEditingId(null);
     setFormData(emptyForm());
+    setIsCustomCategory(false);
     setError("");
   }
 
@@ -275,10 +294,14 @@ function Transactions() {
     }
 
     const isEditing = editingId !== null;
+    const enteredCategory = formData.category.trim();
+    const matchingCategory = categories.find(
+      (name) => name.toLowerCase() === enteredCategory.toLowerCase()
+    );
 
     const item = {
       title: formData.title.trim(),
-      category: formData.category.trim(),
+      category: matchingCategory || enteredCategory,
       type: formData.type,
       amount,
       transaction_date: formData.transaction_date,
@@ -1094,19 +1117,58 @@ function Transactions() {
               <div className="mt-5">
                 <label className={labelClass}>Category</label>
 
-                <input
-                  maxLength={100}
-                  required
-                  value={formData.category}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      category: e.target.value,
-                    })
-                  }
-                  placeholder="e.g. Food"
+                <select
+                  required={!isCustomCategory}
+                  value={isCustomCategory ? "__custom__" : formData.category}
+                  onChange={(e) => {
+                    const value = e.target.value;
+
+                    if (value === "__custom__") {
+                      setIsCustomCategory(true);
+                      setFormData({
+                        ...formData,
+                        category: "",
+                      });
+                    } else {
+                      setIsCustomCategory(false);
+                      setFormData({
+                        ...formData,
+                        category: value,
+                      });
+                    }
+                  }}
                   className={inputClass}
-                />
+                >
+                  <option value="" disabled>
+                    Select a category
+                  </option>
+
+                  {categories.map((name) => (
+                    <option key={name} value={name}>
+                      {name}
+                    </option>
+                  ))}
+
+                  <option value="__custom__">+ Add new category</option>
+                </select>
+
+                {isCustomCategory && (
+                  <input
+                    type="text"
+                    maxLength={100}
+                    required
+                    autoFocus
+                    value={formData.category}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        category: e.target.value,
+                      })
+                    }
+                    placeholder="Enter a new category"
+                    className={`${inputClass} mt-3`}
+                  />
+                )}
               </div>
 
               {/* AMOUNT */}
